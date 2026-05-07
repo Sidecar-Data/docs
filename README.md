@@ -1,55 +1,45 @@
-# Mintlify Starter Kit
+# Sidecar Data Docs
 
-Use the starter kit to get your docs deployed and ready to customize.
+Customer-facing documentation for Sidecar, built with [Mintlify](https://mintlify.com).
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+## Setup (First Time)
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+1. Sign up at [mintlify.com](https://mintlify.com) and create an organization.
+2. Install the [Mintlify GitHub App](https://dashboard.mintlify.com/settings/organization/github-app) and connect this repo.
+3. In the Mintlify dashboard, set the docs directory to `docs/` (the subdirectory containing `docs.json`).
+4. Push to the default branch — Mintlify will auto-deploy.
+5. (Optional) Set up a custom domain (e.g., `docs.sidecardata.com`):
+   - In the Mintlify dashboard, go to Settings > Custom Domain.
+   - Add a CNAME record in your DNS provider: `docs.sidecardata.com` → `cname.mintlify.com`.
+   - Mintlify handles SSL automatically.
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
+## Local Development
 
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
+Requires Node 22 (LTS). If you're on a newer version, use Docker:
 
 ```bash
-npx skills add https://mintlify.com/docs
+docker run --rm -p 3333:3333 -v $(pwd):/app -w /app node:22-alpine sh -c "npx -y mintlify dev --host 0.0.0.0 --port 3333"
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+Preview at `http://localhost:3333`.
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
+## Deployment
 
-## Development
+Changes pushed to the default branch are automatically deployed via the [Mintlify GitHub App](https://dashboard.mintlify.com/settings/organization/github-app). Pull requests get preview deployments.
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
-npm i -g mint
-```
-
-Run the following command at the root of your documentation, where your `docs.json` is located:
+## Structure
 
 ```
-mint dev
+docs/
+├── docs.json                          # Mintlify config (nav, theme, branding)
+├── index.mdx                          # Landing page
+├── quickstart.mdx                     # Quickstart guide
+└── integrations/
+    ├── data-warehouses/               # Snowflake, BigQuery, Redshift, Databricks
+    ├── transformation/                # dbt Cloud, dbt Core
+    ├── bi-analytics/                  # Looker, Metabase, Lightdash, Omni, Power BI
+    ├── extract-load/                  # Fivetran
+    ├── communication/                 # Slack, Microsoft Teams
+    ├── project-management/            # Jira, Linear
+    └── other/                         # Sidecar MCP, Contract Agent
 ```
-
-View your local preview at `http://localhost:3000`.
-
-## Publishing changes
-
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
-
-## Need help?
-
-### Troubleshooting
-
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
-
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
