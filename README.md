@@ -43,3 +43,11 @@ docs/
     ├── project-management/            # Jira, Linear
     └── other/                         # Sidecar MCP, Contract Agent
 ```
+
+## Screenshots
+
+<img width="2438" height="1433" alt="image" src="https://github.com/user-attachments/assets/0fc7a120-f844-40e4-9fdc-4742c2f5dd98" />
+
+<img width="2296" height="1439" alt="image" src="https://github.com/user-attachments/assets/8c11ee7f-35e9-43c7-bff2-d792ed047528" />
+
+
