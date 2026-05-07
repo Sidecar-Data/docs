@@ -1,0 +1,99 @@
+---
+title: Redshift
+description: "Connect your Amazon Redshift cluster to Sidecar"
+icon: "aws"
+---
+
+## Prerequisites
+
+To create the read-only service user for Sidecar, you will need admin credentials to your Redshift cluster.
+
+## 1. Create a user and group
+
+As a super user, execute the following SQL script:
+
+```sql
+-- Create Sidecar user and group
+CREATE USER sidecar_user PASSWORD 'changehere' SYSLOG ACCESS UNRESTRICTED;
+ALTER USER sidecar_user SYSLOG ACCESS UNRESTRICTED;
+
+CREATE GROUP sidecar_group;
+ALTER GROUP sidecar_group ADD USER sidecar_user;
+
+-- Grant select to system table
+GRANT SELECT ON svv_table_info TO GROUP sidecar_group;
+```
+
+<Note>
+  - `SYSLOG` permissions allow Sidecar to read query logs from all users.
+  - `SELECT` permissions on **SVV_TABLE_INFO** allow Sidecar to read metadata about tables in your warehouse.
+</Note>
+
+## 2. Grant permissions to schemas
+
+For each schema you want Sidecar to monitor:
+
+```sql
+GRANT USAGE ON SCHEMA "schema" TO GROUP sidecar_group;
+GRANT SELECT ON ALL TABLES IN SCHEMA "schema" TO GROUP sidecar_group;
+ALTER DEFAULT PRIVILEGES IN SCHEMA "schema"
+  GRANT SELECT ON TABLES TO GROUP sidecar_group;
+```
+
+<Accordion title="Helper: generate grant statements for all schemas">
+  ```sql
+  SELECT
+    'GRANT USAGE ON SCHEMA "' || schema_name || '" TO GROUP sidecar_group;'
+    || E'\n' ||
+    'GRANT SELECT ON ALL TABLES IN SCHEMA "' || schema_name
+    || '" TO GROUP sidecar_group;' || E'\n' ||
+    'ALTER DEFAULT PRIVILEGES IN SCHEMA "' || schema_name
+    || '" GRANT SELECT ON TABLES TO GROUP sidecar_group;'
+    AS single_schema_statement
+  FROM svv_all_schemas
+  WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_internal');
+  ```
+</Accordion>
+
+<Note>
+  Default privileges set for ETL users ensure Sidecar maintains access to tables as ETL jobs run and create/update tables.
+</Note>
+
+## Complete setup script
+
+```sql
+-- Create Sidecar user and group
+CREATE USER sidecar_user PASSWORD 'Sidecar_redshift123' SYSLOG ACCESS UNRESTRICTED;
+ALTER USER sidecar_user SYSLOG ACCESS UNRESTRICTED;
+
+CREATE GROUP sidecar_group;
+ALTER GROUP sidecar_group ADD USER sidecar_user;
+
+-- Grant select to system table
+GRANT SELECT ON svv_table_info TO GROUP sidecar_group;
+
+-- Create schema for Sidecar
+CREATE SCHEMA IF NOT EXISTS sidecar AUTHORIZATION sidecar_user;
+GRANT USAGE, CREATE ON SCHEMA sidecar TO GROUP sidecar_group;
+
+-- Generate grant statements for all user schemas
+SELECT
+  'GRANT USAGE ON SCHEMA "' || schema_name || '" TO GROUP sidecar_group;'
+  || E'\n' ||
+  'GRANT SELECT ON ALL TABLES IN SCHEMA "' || schema_name
+  || '" TO GROUP sidecar_group;' || E'\n' ||
+  'ALTER DEFAULT PRIVILEGES IN SCHEMA "' || schema_name
+  || '" GRANT SELECT ON TABLES TO GROUP sidecar_group;'
+  AS single_schema_statement
+FROM svv_all_schemas
+WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_internal');
+```
+
+## Whitelist Sidecar IPs
+
+If you restrict Redshift access based on IP:
+
+1. Open the security groups for your Redshift cluster (VPC or EC2 subnet).
+2. Add an inbound rule:
+   - **Port Range:** your Redshift port (default: `5439`)
+   - **Source IP:** `44.236.246.98`

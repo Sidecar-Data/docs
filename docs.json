@@ -1,11 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Sidecar Data",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#6C5CE7",
+    "light": "#A29BFE",
+    "dark": "#5A4BD1"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -14,55 +14,68 @@
         "tab": "Guides",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "quickstart"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Integrations",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Data Warehouses",
             "pages": [
-              "api-reference/introduction"
+              "integrations/data-warehouses/snowflake",
+              "integrations/data-warehouses/bigquery",
+              "integrations/data-warehouses/redshift",
+              "integrations/data-warehouses/databricks"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Transformation",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "integrations/transformation/dbt-cloud",
+              "integrations/transformation/dbt-core"
+            ]
+          },
+          {
+            "group": "BI & Analytics",
+            "pages": [
+              "integrations/bi-analytics/looker",
+              "integrations/bi-analytics/metabase",
+              "integrations/bi-analytics/lightdash",
+              "integrations/bi-analytics/omni",
+              "integrations/bi-analytics/power-bi"
+            ]
+          },
+          {
+            "group": "Extract & Load",
+            "pages": [
+              "integrations/extract-load/fivetran"
+            ]
+          },
+          {
+            "group": "Communication",
+            "pages": [
+              "integrations/communication/slack",
+              "integrations/communication/ms-teams"
+            ]
+          },
+          {
+            "group": "Project Management",
+            "pages": [
+              "integrations/project-management/jira",
+              "integrations/project-management/linear"
+            ]
+          },
+          {
+            "group": "Other",
+            "pages": [
+              "integrations/other/sidecar-mcp",
+              "integrations/other/contract-agent"
             ]
           }
         ]
@@ -71,14 +84,14 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "App",
+          "href": "https://app.sidecardata.com",
+          "icon": "browser"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Contact Us",
+          "href": "mailto:support@sidecardata.com",
+          "icon": "envelope"
         }
       ]
     }
@@ -91,32 +104,19 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@sidecardata.com"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Login",
+      "href": "https://app.sidecardata.com"
     }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "website": "https://sidecardata.com",
+      "linkedin": "https://www.linkedin.com/company/sidecar-data/"
     }
   }
 }

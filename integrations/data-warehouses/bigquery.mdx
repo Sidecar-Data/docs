@@ -1,0 +1,119 @@
+---
+title: BigQuery
+description: "Connect your Google BigQuery project to Sidecar"
+icon: "google"
+---
+
+## Prerequisites
+
+You'll need to create a custom role and service account in GCP. This role and service account must be added to each Project you want Sidecar to ingest metadata for.
+
+## 1. Setting up a role and service account
+
+<Tabs>
+  <Tab title="GCP Console">
+    ### Create a custom role in GCP
+
+    1. Navigate to `Roles` in the `IAM & Admin` section.
+    2. Click the `+ Create Role` button.
+    3. Give the new role a name such as `Sidecar Data BigQuery`.
+    4. Click `+ Add Permissions`, and add the following permissions:
+
+    | # | Permission | Reason |
+    |---|-----------|--------|
+    | 1 | `bigquery.datasets.get` | Metadata Ingestion |
+    | 2 | `bigquery.tables.get` | Metadata Ingestion |
+    | 3 | `bigquery.tables.getData` | Metadata Ingestion |
+    | 4 | `bigquery.tables.list` | Metadata Ingestion |
+    | 5 | `resourcemanager.projects.get` | Metadata Ingestion |
+    | 6 | `bigquery.jobs.create` | Metadata Ingestion |
+    | 7 | `bigquery.jobs.listAll` | Metadata Ingestion |
+    | 8 | `bigquery.routines.get` | Stored Procedure |
+    | 9 | `bigquery.routines.list` | Stored Procedure |
+    | 10 | `bigquery.readsessions.create` | Usage & Lineage Workflow |
+    | 11 | `bigquery.readsessions.getData` | Usage & Lineage Workflow |
+    | 12 | `logging.operations.list` | Incremental Metadata Ingestion |
+
+    5. Click `Create` to create the role.
+    6. Repeat the role creation process for each Project you want Sidecar to ingest metadata for.
+
+    ### Create a service account
+
+    1. Navigate to `Service accounts` in the `IAM & Admin` section.
+    2. Click `+ Create Service Account`.
+    3. Give the new service account a name like `sidecar-data`.
+    4. Under "Grant this service account access to project", select the custom role you created above.
+    5. Click `Done`.
+    6. For all other Projects you want Sidecar to ingest metadata for:
+       1. Navigate to `IAM` in the `IAM & Admin` section.
+       2. Click `+ Grant Access`.
+       3. Under "Add principals", enter the email address generated for the service account.
+       4. Under "Assign roles", select the custom role you created.
+       5. Click `Save`.
+  </Tab>
+  <Tab title="Bash Script">
+    Replace the `PROJECTS`, `ROLE_ID`, `ROLE_TITLE`, and `ROLE_DESCRIPTION` with your own values:
+
+    ```bash
+    #!/bin/bash
+
+    PROJECTS=("project-1-id" "project-2-id" "project-3-id")
+
+    ROLE_ID="sidecarDataBigQuery"
+    ROLE_TITLE="SidecarData BigQuery"
+    ROLE_DESCRIPTION="Custom IAM role for Sidecar's service account to access BigQuery"
+
+    PERMISSIONS=(
+        "bigquery.datasets.create",
+        "bigquery.datasets.get",
+        "bigquery.tables.get",
+        "bigquery.tables.getData",
+        "bigquery.tables.list",
+        "resourcemanager.projects.get",
+        "bigquery.jobs.create",
+        "bigquery.jobs.listAll",
+        "bigquery.routines.get",
+        "bigquery.routines.list",
+        "bigquery.readsessions.create",
+        "bigquery.readsessions.getData",
+        "logging.operations.list",
+    )
+
+    PERMISSIONS_CSV=$(IFS=,; echo "${PERMISSIONS[*]}")
+
+    for PROJECT in "${PROJECTS[@]}"; do
+        echo "Creating IAM role in project: $PROJECT"
+
+        gcloud iam roles create $ROLE_ID \
+            --project="$PROJECT" \
+            --title="$ROLE_TITLE" \
+            --description="$ROLE_DESCRIPTION" \
+            --permissions="$PERMISSIONS_CSV" \
+            --stage="GA"
+
+        echo "IAM role created successfully in project: $PROJECT"
+    done
+
+    echo "IAM role creation process completed!"
+    ```
+  </Tab>
+</Tabs>
+
+## 2. Create and download key credentials
+
+1. For your primary Project, navigate to `Service accounts` in the `IAM & Credentials` section.
+2. Find the service account you created for Sidecar, click the 3 dots and click `Manage keys`.
+3. Click `Add key`, then `Create new key`.
+4. Select **JSON** as the Key type.
+5. Click `Create`. This will download a JSON file to your machine.
+
+## 3. Upload your service account key to Sidecar
+
+1. In the Onboarding page (or Account Settings), navigate to "Connect your data warehouse" and select "BigQuery".
+2. Select the downloaded JSON key file from Step 2.
+3. Click `Test` then `Save`.
+
+## 4. Additional Permissions
+
+- **Cloud Resource Manager API** and **Cloud Asset API** must be enabled.
+- Add the `Cloud Asset Viewer` role to the Sidecar service account.

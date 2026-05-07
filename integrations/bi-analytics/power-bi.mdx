@@ -1,0 +1,82 @@
+---
+title: Power BI
+description: "Connect Microsoft Power BI to Sidecar"
+icon: "chart-column"
+---
+
+## Prerequisites
+
+- Admin access to **Microsoft Entra ID** (formerly Azure AD)
+- Admin access to **Microsoft Fabric** (formerly Power BI Admin Portal)
+
+## Overview
+
+1. Create an Azure app
+2. Create a security group in Microsoft Entra ID
+3. Enable Power BI service admin settings
+4. Add the Azure app to your workspaces
+5. Connect Power BI to Sidecar
+
+## 1. Create an Azure app
+
+1. Open the [Azure Portal](https://ms.portal.azure.com/#allservices) and sign in.
+2. Search for **App registrations** and select it.
+3. Click **New registration**.
+4. Fill in the required information:
+   - **Name:** `Sidecar Data`
+   - **Supported account types:** leave the default ("Accounts in this organizational directory only — Single tenant")
+   - **Redirect URI:** leave empty
+5. Click **Register**.
+6. From the Overview page, copy the **Application (client) ID** and **Directory (tenant) ID**. Store them securely.
+7. Click **Certificates & secrets** from the left menu.
+8. Under Client secrets, click **+ New client secret**.
+9. Enter a description, select an expiry time, and click **Add**.
+10. Copy the client secret **Value** and store it securely.
+
+## 2. Create a security group in Microsoft Entra ID
+
+1. Open the [Azure Portal](https://ms.portal.azure.com/#allservices) and sign in.
+2. Search for **Microsoft Entra ID** and select it.
+3. Click **Groups** under the Manage section.
+4. Click **New group**.
+5. Fill in:
+   - **Group type:** Security
+   - **Name:** `Power BI - API Access`
+6. Click "No members selected", search for **Sidecar Data**, and select it.
+7. Click **Create**.
+
+## 3. Enable Power BI service admin settings
+
+1. Open the [Power BI admin portal](https://app.powerbi.com/admin-portal/) and sign in.
+2. Click **Tenant Settings** under the Admin Portal.
+3. Under **Developer settings**, expand **Service principals can call Fabric public APIs**:
+   - Set to **Enabled**
+   - Add your security group from Step 2 under **Specific security groups**
+   - Click **Apply**
+4. Repeat for the following sections under **Admin API settings**:
+   - Service principals can access read-only admin APIs
+   - Enhance admin APIs responses with detailed metadata
+   - Enhance admin APIs responses with DAX and mashup expressions
+
+## 4. Add the Azure app to your workspaces
+
+1. Open [Power BI](https://app.powerbi.com/) and sign in.
+2. For each workspace you want Sidecar to access:
+   1. From the workspace menu, select **Workspace access**.
+   2. Click **+ Add people or groups**.
+   3. Search for **Sidecar Data**, set permissions to **Contributor**.
+   4. Click **Add**.
+
+<Warning>
+  If you have Power BI reports using Semantic Models from other workspaces, add the Azure App as a **Contributor** to those workspaces as well. This is required for column-level lineage.
+</Warning>
+
+## 5. Connect Power BI to Sidecar
+
+Provide the following information to the Sidecar team:
+
+| Field | Description |
+|-------|-------------|
+| **Client ID** | Application (client) ID from Step 1 |
+| **Client Secret** | Client secret value from Step 1 |
+| **Tenant ID** | Directory (tenant) ID from Step 1 |

@@ -1,0 +1,47 @@
+---
+title: Sidecar MCP
+description: "Connect the Sidecar MCP server to your AI IDE"
+icon: "robot"
+---
+
+## 1. Create a Token
+
+1. In the Sidecar app, navigate to the **Users** tab.
+2. Click the **Tokens** tab.
+3. Click **Create Token**.
+4. Enter a name for the token.
+5. Set the expiration (1–365 days, or leave empty for no expiration).
+6. Click **Create**.
+
+<Warning>
+  The token is only visible once. Copy it and store it in a safe place.
+</Warning>
+
+## 2. Connect to Your AI IDE
+
+<Tabs>
+  <Tab title="Cursor">
+    1. Click the **Add to Cursor** button in the Sidecar app. This will auto-fill the required parameters.
+    2. Click **Install** in Cursor to complete the setup.
+  </Tab>
+  <Tab title="Claude Code">
+    Run the following command in your terminal:
+
+    ```bash
+    claude mcp add --transport http sidecar-mcp https://service-mcp.sidecardata.com/mcp \
+      --header "Authorization: Bearer scp_mcp_rest_of_generated_token"
+    ```
+
+    Replace `scp_mcp_rest_of_generated_token` with the token you created in Step 1.
+  </Tab>
+  <Tab title="Other AI IDEs">
+    Use the following details to manually configure the MCP server in your IDE:
+
+    | Field | Value |
+    |-------|-------|
+    | **URL** | `https://service-mcp.sidecardata.com/mcp` |
+    | **Authorization** | `Bearer scp_mcp_rest_of_generated_token` |
+
+    Replace `scp_mcp_rest_of_generated_token` with the token you created in Step 1.
+  </Tab>
+</Tabs>

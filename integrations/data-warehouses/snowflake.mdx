@@ -1,0 +1,154 @@
+---
+title: Snowflake
+description: "Connect your Snowflake account to Sidecar"
+icon: "snowflake"
+---
+
+## Prerequisites
+
+To follow the steps in this guide, you'll need:
+
+- **Account Admin permissions in Sidecar**
+- **Permissions in Snowflake** that allow you to:
+  - Create database users, create warehouses, create databases, and grant permissions
+  - Set up key-pair authentication
+
+## 1. (Optional) Create a warehouse for Sidecar
+
+You can also grant Sidecar an existing warehouse if you prefer.
+
+```sql
+create warehouse if not exists SIDECAR_WH
+warehouse_size = xsmall
+warehouse_type = standard
+auto_suspend = 60
+auto_resume = true
+initially_suspended = true
+comment = 'Used by Sidecar Data';
+```
+
+## 2. Create a user, role, and database for Sidecar
+
+```sql
+-- Create core Sidecar infra: role, user, database
+use role ACCOUNTADMIN;
+create role if not exists SIDECAR_ROLE;
+create user if not exists SIDECAR_USER;
+grant role SIDECAR_ROLE to user SIDECAR_USER;
+alter user SIDECAR_USER set default_role = SIDECAR_ROLE;
+alter user SIDECAR_USER set type = service;
+alter user SIDECAR_USER set password = 'strong_password_here';
+set default_warehouse = '<warehouse>'; -- existing or SIDECAR_WH
+
+-- So that any SYSADMIN user can use the Sidecar tables
+grant role SIDECAR_ROLE to role SYSADMIN;
+
+-- Create database for Sidecar
+create database if not exists SIDECAR_DATABASE;
+
+-- Grant Sidecar role access to Sidecar warehouse
+grant all on warehouse SIDECAR_DATABASE to role SIDECAR_ROLE;
+
+-- Grant Sidecar access to Sidecar database
+grant all on database SIDECAR_DATABASE to role SIDECAR_ROLE;
+grant SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES
+  on all tables in database SIDECAR_DATABASE to role SIDECAR_ROLE;
+grant SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES
+  on future tables in database SIDECAR_DATABASE to role SIDECAR_ROLE;
+grant SELECT on all views in database SIDECAR_DATABASE to role SIDECAR_ROLE;
+grant SELECT on future views in database SIDECAR_DATABASE to role SIDECAR_ROLE;
+grant USAGE, MONITOR on all schemas in database SIDECAR_DATABASE to role SIDECAR_ROLE;
+grant USAGE, MONITOR on future schemas in database SIDECAR_DATABASE to role SIDECAR_ROLE;
+```
+
+## 3. Add key-pair authentication to the Sidecar user
+
+<Note>
+  Starting November 2025, Snowflake requires all service users to use key-pair authentication. Sidecar recommends using key-pair when setting up a user for Sidecar.
+</Note>
+
+1. Follow [Snowflake's instructions](https://docs.snowflake.com/en/user-guide/key-pair-auth) for generating a key-pair.
+2. Using the public key generated, alter the user for Sidecar:
+
+```sql
+ALTER USER SIDECAR_USER SET RSA_PUBLIC_KEY='public_key_here';
+```
+
+## 4. Grant Sidecar access to Snowflake system views and warehouse monitoring
+
+```sql
+grant IMPORTED PRIVILEGES on database SNOWFLAKE to role SIDECAR_ROLE;
+grant CREATE DATABASE on ACCOUNT to role SIDECAR_ROLE;
+grant MANAGE WAREHOUSES ON ACCOUNT to role SIDECAR_ROLE;
+```
+
+## 5. Grant Sidecar access to databases you'd like to monitor
+
+```sql
+-- Use SHOW DATABASES to get a list of all your databases
+-- Repeat for all databases you'd like Sidecar to monitor
+grant usage, monitor on DATABASE <database> TO ROLE SIDECAR_ROLE;
+grant usage, monitor on all schemas IN DATABASE <database> to role SIDECAR_ROLE;
+grant usage, monitor on future schemas IN DATABASE <database> to role SIDECAR_ROLE;
+```
+
+## 6. Grant Sidecar access to schemas you'd like to monitor
+
+```sql
+-- Repeat for all databases + schemas you'd like Sidecar to monitor
+grant select on all tables in schema <database>.<schema> to role SIDECAR_ROLE;
+grant select on future tables in schema <database>.<schema> to role SIDECAR_ROLE;
+grant select on all views in schema <database>.<schema> to role SIDECAR_ROLE;
+grant select on future views in schema <database>.<schema> to role SIDECAR_ROLE;
+```
+
+<Accordion title="Helper script: generate grant statements for all schemas">
+  This command generates the SQL statements for all `(database.schema)` pairs. You must grant access to databases before running this (Step 5).
+
+  ```sql
+  SELECT
+    'GRANT SELECT ON ' || k.scope || ' ' || o.obj || ' IN SCHEMA "' ||
+    REPLACE(s.catalog_name, '"','""') || '"."' || REPLACE(s.schema_name, '"','""') ||
+    '" TO ROLE SIDECAR_ROLE;' AS grant_stmt
+  FROM SNOWFLAKE.ACCOUNT_USAGE.SCHEMATA AS s
+       , LATERAL (SELECT 'ALL' AS scope UNION ALL SELECT 'FUTURE') AS k
+       , LATERAL (SELECT 'TABLES' AS obj UNION ALL SELECT 'VIEWS')     AS o
+  WHERE s.deleted IS NULL
+    AND s.catalog_name <> 'SNOWFLAKE'
+    AND NOT STARTSWITH(s.catalog_name, 'USER$')
+  ORDER BY s.catalog_name, s.schema_name, o.obj, k.scope;
+  ```
+</Accordion>
+
+<Accordion title="Alternative: database-level grants">
+  For customers who only wish to grant database-level privileges, use the following. **Note: Database-level privileges are ignored if schema-level privileges are granted to other users, so this approach may lead to inconsistent access.**
+
+  ```sql
+  SELECT
+    'GRANT SELECT ON ' || k.scope || ' ' || o.obj || ' IN DATABASE "' ||
+    REPLACE(d.database_name, '"','""') ||
+    '" TO ROLE SIDECAR_ROLE;' AS grant_stmt
+  FROM SNOWFLAKE.ACCOUNT_USAGE.DATABASES AS d
+       , LATERAL (SELECT 'ALL' AS scope UNION ALL SELECT 'FUTURE') AS k
+       , LATERAL (SELECT 'TABLES' AS obj UNION ALL SELECT 'VIEWS') AS o
+  WHERE d.deleted IS NULL
+    AND d.database_name <> 'SNOWFLAKE'
+    AND NOT STARTSWITH(d.database_name, 'USER$')
+  ORDER BY d.database_name, o.obj, k.scope;
+  ```
+</Accordion>
+
+## 7. Locate your Snowflake Account ID
+
+1. In Snowflake, in the bottom-left corner, click your avatar.
+2. Select **Account > View Account Details**.
+3. Copy the value for **Account Identifier**.
+
+## 8. Connect Snowflake to Sidecar
+
+1. On the **Integrations** page, navigate to the Snowflake integration.
+2. Enter your **Account ID** (Step 7).
+3. Enter the name of the user you created (e.g., `SIDECAR_USER`) (Step 2).
+4. Enter either the password or private key + private key passphrase for the Sidecar user (Step 3).
+5. Click **Test Connection**.
+6. Click **Save**.

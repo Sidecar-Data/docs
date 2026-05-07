@@ -1,0 +1,27 @@
+---
+title: Metabase
+description: "Connect your Metabase instance to Sidecar"
+icon: "chart-pie"
+---
+
+## 1. Create a Metabase API key
+
+1. Click the gear icon in the top right, then select **Admin settings**.
+2. In the left-hand menu, click on **Settings**, then **Authentication**.
+3. Scroll down to the **API Keys** section and click the **Manage** button.
+4. Click the **Create API Key** button.
+5. Create a new API Key:
+   - **Key name:** Give it a descriptive name (e.g., `Sidecar`)
+   - **Select a Group:** Select **Administrator**
+6. Copy the value displayed on the screen.
+
+<Warning>
+  The API key will not be visible again after you leave the page. Save it somewhere safe.
+</Warning>
+
+## 2. Connect Metabase to Sidecar
+
+1. In the Integrations page, navigate to the `Metabase` integration.
+2. In the `Metabase URL` field, input your Metabase URL (e.g., `https://your_account.metabaseapp.com`).
+3. In the `API Key` field, input the key you copied in Step 1.
+4. Click `Test` then `Save`.

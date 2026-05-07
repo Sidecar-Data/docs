@@ -1,0 +1,58 @@
+---
+title: Linear
+description: "Connect your Linear workspace to Sidecar"
+icon: "circle-dot"
+---
+
+## Requirements
+
+- A Linear instance with at least one active team and project
+- A Linear Team ID for issue creation (this is where the Slackbot will create issues)
+
+## 1. Connect Linear to Sidecar
+
+1. Go to the **Integrations** page in Sidecar.
+2. Find and click on the **Linear** integration under "Browse Integrations".
+3. Follow the OAuth flow to connect your Linear account.
+
+## 2. Reinstall the Sidecar Slack app
+
+The Sidecar bot needs new permission scopes to respond to tags and read/summarize messages in your Slack threads. A fresh installation of the Sidecar Slack app is required.
+
+You can reinstall from the **Slack** page in **Integrations**.
+
+## 3. Provide your Linear Team ID
+
+<Info>
+  At this time, you'll need to share your Team ID with the Sidecar team directly. We'll add a self-service flow in the future.
+</Info>
+
+To find your Linear Team ID:
+
+1. Use `Cmd + K` in Linear to open the Command Menu.
+2. Type `UUID` and select **Dev: Copy model UUID**.
+3. The UUIDs displayed are contextual — make sure you're on a page relevant to the team you want.
+4. Copy the Team UUID.
+5. Share this UUID with the Sidecar team in your `#ext-customer-{COMPANY_NAME}` Slack channel.
+
+## Using the Linear Integration
+
+Once integrated, Sidecar imports your team's issues and includes business context from Linear in your metadata store.
+
+The primary interaction is through the **Sidecar Slackbot**. Tag Sidecar in any Slack thread to automatically summarize the conversation and create a Linear issue:
+
+- `@sidecar create ticket`
+- `@sidecar write ticket`
+- `@sidecar update ticket`
+- `@sidecar ticket`
+
+All commands do the same thing:
+
+1. Summarize the current state of the thread
+2. Update Sidecar's internal records
+3. Push the summary to Linear (creating or updating the issue)
+4. Add a comment linking back to the original Slack thread
+
+<Warning>
+  You must add the Sidecar Slackbot to any channels where you want it to listen for invocations.
+</Warning>

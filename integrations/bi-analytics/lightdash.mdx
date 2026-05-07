@@ -1,0 +1,40 @@
+---
+title: Lightdash
+description: "Connect your Lightdash project to Sidecar"
+icon: "lightbulb"
+---
+
+## Requirements
+
+- A Lightdash account for your organization
+- A Lightdash project to integrate with Sidecar
+- A Lightdash Personal Access Token (PAT)
+
+## 1. Get your Instance URL and Project ID
+
+Navigate to the general settings for your Lightdash project. The settings can be accessed by clicking the gear icon or directly via URL:
+
+```
+https://{your_instance_url}/generalSettings/projectManagement/{your_project_uuid}/settings
+```
+
+## 2. Create a Personal Access Token
+
+Sidecar needs a PAT to interact with the Lightdash API on your organization's behalf.
+
+1. Navigate to the Personal Access Tokens page:
+   ```
+   https://{your_instance_url}/generalSettings/personalAccessTokens
+   ```
+2. Create a new token.
+
+<Note>
+  It is recommended that the PAT you configure for Sidecar is created with **no expiration date**. Save the PAT in a password manager — after you navigate away, you cannot view it again.
+</Note>
+
+## 3. Connect Lightdash to Sidecar
+
+1. Go to the **Integrations** page in Sidecar.
+2. Find and click on the **Lightdash** integration under "Browse integrations".
+3. Enter your **Instance URL**, **Project ID**, and **PAT**.
+4. Click **Test** then **Save**.

@@ -1,0 +1,79 @@
+---
+title: Jira
+description: "Connect your Jira Cloud account to Sidecar"
+icon: "jira"
+---
+
+## Requirements
+
+- Jira Cloud account for your organization
+- A Sidecar service account/user in Jira
+- A scoped API token
+
+## 1. Create a Jira user for Sidecar
+
+Go to your Jira Project Access settings and add a user for the Sidecar service account:
+
+```
+https://my-site-name.atlassian.net/jira/software/projects/PROJECT_KEY/settings/access
+```
+
+## 2. Create a scoped API token
+
+1. Navigate to [API token management](https://id.atlassian.com/manage-profile/security/api-tokens).
+2. Create a scoped token with the following scopes:
+   - `read:jira-work`
+   - `write:jira-work`
+
+## 3. Get your Jira Cloud ID
+
+Visit the following URL to get your Jira Cloud ID:
+
+```
+https://my-site-name.atlassian.net/_edge/tenant_info
+```
+
+## 4. Determine the Jira project key
+
+Identify the project key for the Jira project where Sidecar will create issues from ad-hoc requests:
+
+```
+https://my-site-name.atlassian.net/jira/software/projects/PROJECT_KEY/
+```
+
+## 5. Determine the JQL statement for initial issue import
+
+Create a [JQL statement](https://support.atlassian.com/jira-software-cloud/docs/use-advanced-search-with-jira-query-language-jql/) to define which existing issues Sidecar should import.
+
+## 6. Connect Jira to Sidecar
+
+1. Go to the **Integrations** page in Sidecar.
+2. Find and click on the **Jira** integration under "Browse integrations".
+3. Enter your Cloud ID, API token, project key, and JQL statement.
+4. Click **Test** then **Save**.
+
+<Note>
+  A valid JQL statement that retrieves at least one issue is required for a successful connection test.
+</Note>
+
+## Using the Jira Integration
+
+Once integrated, Sidecar imports your team's issues and includes business context from Jira in your metadata store.
+
+The primary interaction is through the **Sidecar Slackbot**. Tag Sidecar in any Slack thread to automatically summarize the conversation and create a Jira issue:
+
+- `@sidecar create ticket`
+- `@sidecar write ticket`
+- `@sidecar update ticket`
+- `@sidecar ticket`
+
+All commands do the same thing:
+
+1. Summarize the current state of the thread
+2. Update Sidecar's internal records
+3. Push the summary to Jira (creating or updating the issue)
+4. Add a comment linking back to the original Slack thread
+
+<Warning>
+  You must add the Sidecar Slackbot to any channels where you want it to listen for invocations.
+</Warning>

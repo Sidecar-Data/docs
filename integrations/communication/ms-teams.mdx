@@ -1,0 +1,33 @@
+---
+title: Microsoft Teams
+description: "Connect Microsoft Teams to Sidecar"
+icon: "microsoft"
+---
+
+## 1. Grant permissions
+
+1. Go to the **Settings** page in Sidecar, select the **Microsoft Teams** tab.
+2. Press `Connect now`.
+3. A new tab will open requesting permissions. This is only used to get your tenant ID.
+4. After you accept, you will be redirected back to Sidecar.
+5. Select **Return to Integration Page**.
+
+## 2. Install the Sidecar App in Teams
+
+1. Open Teams, select **Apps**, then choose **Manage your apps**.
+2. Select **Upload an app**.
+3. Choose **Upload a custom app**, then select the `sidecar.zip` file provided by the Sidecar team.
+4. After uploading, the Sidecar app will appear in your apps list.
+5. Click **Add**, and choose the **General** channel.
+
+<Note>
+  This step only registers your team — the bot will not send notifications to this channel.
+</Note>
+
+## 3. Configure bot notifications
+
+1. Back in the Sidecar app, go to the **Teams** settings.
+2. Select the channel where you want the bot to send alerts.
+3. Press **Save**.
+
+When a dbt job fails, the bot will send an alert to the configured channel.

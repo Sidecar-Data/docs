@@ -1,0 +1,54 @@
+---
+title: dbt Cloud
+description: "Connect your dbt Cloud account to Sidecar"
+icon: "cloud"
+---
+
+## Requirements
+
+Sidecar requires a dbt Cloud service account token to access the dbt Cloud API. This token must have permission to access the Administrative API, the Discovery API, and the ability to create and execute jobs.
+
+You must be on a **Team** or **Enterprise** plan, and your projects must be on **version 1.0 or later**.
+
+## 1. Create a service account token
+
+1. Navigate to `Account settings` in dbt Cloud.
+2. Navigate to `API tokens > Service tokens`.
+3. Click `+ Create service token`.
+4. Give the service token a name like `sidecar-data`.
+5. Click `+ Add permission`.
+
+<Tabs>
+  <Tab title="Team accounts">
+    1. `Job Admin` — to create and execute jobs
+    2. `Member` — to access the Discovery API and Administrative API
+    3. `Billing Admin` — to monitor costs
+  </Tab>
+  <Tab title="Enterprise accounts">
+    1. `Developer` — to access the Discovery API, create and execute jobs
+    2. `Account viewer` — to access the Administrative API
+    3. `Billing Admin` — to monitor costs
+  </Tab>
+</Tabs>
+
+6. Click `Save` to create the service token.
+7. Copy the service token value and save it in a safe place.
+
+## 2. Connect dbt Cloud to Sidecar
+
+1. In the Onboarding page (or Settings), navigate to the **Connect your dbt Cloud** section.
+2. Enter your `Account ID`. This can be found in dbt Cloud under `Account Settings > Account > Account ID`.
+3. Paste the `API Token` you created in Step 1.
+4. dbt Cloud has standard and non-standard API URLs. Check which type you have by navigating to `Account Settings > Account` in dbt Cloud:
+   - If you see a section called `Access URLs`, you have **non-standard URLs**.
+   - If you do not, you have **standard URLs**.
+5. If you have non-standard URLs, enter the values for `Access URL`, `Semantic Layer GraphQL API URL`, and `Discovery API URL`. Otherwise, skip this step.
+6. Click `Test` then `Save`.
+
+<Accordion title="Single-tenant accounts">
+  For customers with single-tenant instances of dbt Cloud, the API URLs follow this pattern:
+
+  - **Access URL:** Your vanity URL for this account
+  - **Discovery API URL:** `https://metadata.YOUR_ACCESS_URL/graphql`
+  - **Semantic Layer GraphQL API URL:** `https://semantic-layer.ABC123.getdbt.com/api/graphql`
+</Accordion>

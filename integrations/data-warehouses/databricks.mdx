@@ -1,0 +1,72 @@
+---
+title: Databricks
+description: "Connect your Databricks workspace to Sidecar"
+icon: "bolt"
+---
+
+## Prerequisites
+
+Before starting, make sure you have:
+
+- Access to a **Databricks workspace**
+- Permission to use a **SQL Warehouse**
+- Access to **Unity Catalog** resources (catalogs, schemas, tables) that you want Sidecar to discover
+
+## 1. Get the Host and HTTP Path
+
+1. Log in to your **Databricks workspace**.
+2. Navigate to **SQL Warehouses**.
+3. Select the **SQL Warehouse** you want to use for the integration.
+4. Click **Connection details**.
+
+Copy the following values:
+
+**Server Hostname** — use this as the **Host**:
+```
+dbc-xxxxxxxx.cloud.databricks.com
+```
+
+**HTTP Path** — use this as the **HTTP Path**:
+```
+/sql/1.0/warehouses/xxxxxxxxxxxx
+```
+
+## 2. Create a Service Principal and OAuth Secret
+
+1. Click your username in the top bar and select **Settings**.
+2. Click the **Identity and access** tab.
+3. Next to **Service principals**, click **Manage**.
+4. Create a new service principal for Sidecar.
+5. Click the created service principal, then click the **Secrets** tab.
+6. Click **Generate secret**.
+7. Set the secret's lifetime in days (maximum 730 days).
+8. Click **Generate**.
+9. Copy the displayed **secret** and **client ID**, then click **Done**.
+
+<Warning>
+  The secret is shown only once. The client ID is the same as the service principal's application ID.
+</Warning>
+
+## 3. Configure the Integration
+
+Enter the following information in the Sidecar integration setup page:
+
+| Field | Description |
+|-------|-------------|
+| **Host** | Databricks Server Hostname |
+| **HTTP Path** | SQL Warehouse HTTP Path |
+| **Client ID** | Client ID of OAuth Secret |
+| **Client Secret** | Secret of OAuth Secret |
+
+After entering the credentials:
+
+1. Click **Test Connection**.
+2. Click **Save** to finish the integration.
+
+## Result
+
+After the integration is complete, Sidecar will be able to:
+
+- Connect to your **Databricks SQL Warehouse**
+- Discover **catalogs, schemas, and tables**
+- Query metadata from **Unity Catalog**

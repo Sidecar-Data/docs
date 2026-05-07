@@ -1,0 +1,81 @@
+---
+title: dbt Core
+description: "Connect your dbt Core project to Sidecar"
+icon: "terminal"
+---
+
+## How It Works
+
+**dbt Core** generates `manifest.json` and `run_results.json` artifacts containing metadata about your dbt project. Sidecar ingests these artifacts to map your models, tests, and lineage.
+
+There are two ways to integrate dbt Core with Sidecar:
+
+1. **Manual upload** — upload artifacts through the Sidecar UI
+2. **Automated upload** — use a credential token to send artifacts from your CI/CD pipeline
+
+## 1. Generate Artifacts
+
+- Install dbt Core locally: [dbt Installation Guide](https://docs.getdbt.com/docs/core/installation-overview)
+- Run `dbt run` or `dbt build`. dbt Core will generate `manifest.json` and `run_results.json` in the `target` folder.
+
+## 2. Manual Upload via the Sidecar UI
+
+1. On the **Onboarding Page** (or the **Settings Page**), navigate to the **Connect your dbt** section and switch to the **dbt Core** tab.
+2. Upload the two artifacts generated in Step 1.
+3. Click `Test`, then click `Save`.
+
+## 3. Automated Upload via API
+
+Click the `Generate` button in the Sidecar UI to obtain a **credential token**. Then use the API to upload artifacts:
+
+```bash
+curl --location 'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+  --header 'X-Artifact-Token: {YOUR_TOKEN}' \
+  --form 'run_results=@"path/to/run_results.json"' \
+  --form 'manifest=@"path/to/manifest.json"'
+```
+
+### Python example
+
+```python
+import requests
+
+artifact_token = '{YOUR_TOKEN}'
+run_results_path = 'path/to/run_results.json'
+manifest_path = 'path/to/manifest.json'
+
+url = 'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/'
+
+headers = {
+    'X-Artifact-Token': artifact_token,
+}
+
+files = {
+    'run_results': open(run_results_path, 'rb'),
+    'manifest': open(manifest_path, 'rb'),
+}
+
+response = requests.post(url, headers=headers, files=files)
+print('Status Code:', response.status_code)
+print('Response:', response.text)
+```
+
+### Airflow example
+
+```python
+from airflow.operators.bash import BashOperator
+
+upload_to_sidecar = BashOperator(
+    task_id="upload_artifacts_to_sidecar",
+    bash_command="""
+    cd /home/airflow/gcs/data/dbt/your-dbt-project
+    curl --location \
+      'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+      --header 'X-Artifact-Token: {{ var.value.sidecar_token }}' \
+      --form 'run_results=@"target/run_results.json"' \
+      --form 'manifest=@"target/manifest.json"'
+    """,
+)
+
+refresh_seeds >> main_dbt_task >> upload_to_sidecar
+```

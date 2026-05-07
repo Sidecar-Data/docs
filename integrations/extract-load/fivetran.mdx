@@ -1,0 +1,26 @@
+---
+title: Fivetran
+description: "Connect your Fivetran account to Sidecar"
+icon: "plug"
+---
+
+## Requirements
+
+A Fivetran account on a **Standard**, **Enterprise**, or **Business Critical** plan is required. Sidecar will need an API key from a user with read and write access to the Fivetran API.
+
+## 1. Create a Fivetran API key
+
+1. In the left-hand navigation bar in Fivetran, look for the username at the bottom.
+2. Click the dropdown. You will see an **API Key** section. Click the API Key link.
+3. Click **Generate new API Key**.
+4. Copy the **API Key** and **API Secret** (not the base64 version) and save them in a safe place.
+
+## 2. Connect Fivetran to Sidecar
+
+1. In the Onboarding page (or Settings), navigate to the `Connect your Extract & Load tool` section.
+2. Enter the `API Key` and `API Secret` from Step 1.
+3. Click `Test` then `Save`.
+
+## 3. Enable the Fivetran Platform connector
+
+Enable the Fivetran Platform connector and the Quickstart Transformations for full metadata coverage.
