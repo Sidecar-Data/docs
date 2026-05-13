@@ -11,6 +11,7 @@ Before starting, make sure you have:
 - Access to a **Databricks workspace**
 - Permission to use a **SQL Warehouse**
 - Access to **Unity Catalog** resources (catalogs, schemas, tables) that you want Sidecar to discover
+- **Unity Catalog admin access** (or help from someone who has it) to grant privileges to the Sidecar service principal
 
 ## 1. Get the Host and HTTP Path
 
@@ -47,7 +48,28 @@ dbc-xxxxxxxx.cloud.databricks.com
   The secret is shown only once. The client ID is the same as the service principal's application ID.
 </Warning>
 
-## 3. Configure the Integration
+## 3. Grant permissions
+
+Grant your Sidecar **service principal** (the OAuth identity from step 2) the following before you test or save the integration in Sidecar.
+
+- **SQL warehouse**: In **SQL Warehouses** → your warehouse → **Permissions**, add the service principal with **Can use**.
+
+- **Data you want Sidecar to scan**: For each Unity Catalog Sidecar should discover besides **`system`**, rerun the **next section’s three `GRANT` statements**, replacing `system` with that catalog’s name and `<principal>` with your Sidecar service principal (usually a catalog owner or metastore admin runs them). If catalog-wide **SELECT** is not allowed, grant **USE SCHEMA** and **SELECT** only on the schemas and objects Sidecar needs.
+
+- **`system` catalog**: Sidecar reads tables in the **`system`** catalog for **query history**, **lineage**, and **billing**. Grant catalog-wide access on **`system`** so the principal can use all schemas and **SELECT** from all tables and views there. In a workspace SQL editor, run—replace `<principal>` with your Sidecar service principal’s Unity Catalog identity:
+
+```sql
+-- Allow the principal to see the catalog
+GRANT USE CATALOG ON CATALOG system TO `<principal>`;
+
+-- Allow the principal to see all schemas within the catalog
+GRANT USE SCHEMA ON CATALOG system TO `<principal>`;
+
+-- Allow the principal to select from all tables/views in the catalog
+GRANT SELECT ON CATALOG system TO `<principal>`;
+```
+
+## 4. Configure the Integration
 
 Enter the following information in the Sidecar integration setup page:
 
@@ -70,3 +92,4 @@ After the integration is complete, Sidecar will be able to:
 - Connect to your **Databricks SQL Warehouse**
 - Discover **catalogs, schemas, and tables**
 - Query metadata from **Unity Catalog**
+- Use **`system`** catalog data for **query history**, **lineage**, and **billing** when those grants are in place
