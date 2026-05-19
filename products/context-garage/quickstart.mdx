@@ -1,0 +1,179 @@
+---
+title: Context Garage quickstart
+description: "Create your first context repo, publish a version, and serve it to downstream tools"
+icon: "rocket"
+---
+
+Use this guide to create a context repo from catalog assets, review the generated files, publish a version, and make it available to another tool.
+
+## Before you start
+
+You need:
+
+- A Sidecar workspace with Context Garage enabled
+- A connected warehouse with catalog assets synced into Sidecar
+- Permission to create and publish context repos
+
+## Create a context repo
+
+<Steps>
+  <Step title="Open Context Garage">
+    In Sidecar, open **Context Garage** from the main navigation.
+
+    <Frame caption="Start from Context Garage when no repos exist.">
+      <img
+        src="/images/context-garage/bootstrap/empty-state.png"
+        alt="Context Garage empty state with Build your first repo button"
+      />
+    </Frame>
+
+  </Step>
+
+  <Step title="Start a new repo">
+    Click **Build your first repo**. Sidecar opens the **Build a context repo** wizard.
+
+  </Step>
+
+  <Step title="Select assets">
+    Choose the Catalog tables this repo should track. You can select individual tables or select a broader database or schema scope.
+
+    To include matching tables that are discovered later, enable **Future** for the selected scope.
+
+    <Frame caption="Select individual tables or broader scopes, then optionally track matching future tables.">
+      <img
+        src="/images/context-garage/bootstrap/asset-selection.png"
+        alt="Three-column asset selector with databases, schemas, tables, selected rows, and Future controls"
+      />
+    </Frame>
+
+  </Step>
+
+  <Step title="Choose sync behavior">
+    Click **Next: Sync behavior**. Choose whether Sidecar should auto-apply Catalog drift to tracked repo files.
+
+    When **Metadata sync** is enabled, Sidecar can update the draft for column adds and removals, type changes, table deletions, and description updates. You can override this behavior later inside the repo.
+
+    <Frame caption="Metadata sync controls how Catalog changes flow into tracked repo files.">
+      <img
+        src="/images/context-garage/bootstrap/sync-behavior.png"
+        alt="Sync behavior step with the Metadata sync toggle enabled"
+      />
+    </Frame>
+
+  </Step>
+
+  <Step title="Name the repo">
+    Click **Next: Name & create**. Enter a repo name and optional description.
+
+    The description appears on the repo card and inside the Build view.
+
+    <Frame caption="Name the repo and add a short description before bootstrapping.">
+      <img
+        src="/images/context-garage/bootstrap/name-and-create.png"
+        alt="Name your repo step with repo name, description, and Create and Bootstrap button"
+      />
+    </Frame>
+
+  </Step>
+
+  <Step title="Create and bootstrap">
+    Click **Create & Bootstrap**. Sidecar reads the Catalog and available dbt SQL, generates the initial repo files, and creates a draft repo.
+
+    Bootstrap is durable. You can leave the page and return later while it runs.
+
+    <Frame caption="Bootstrap shows durable progress while Sidecar creates the draft repo files.">
+      <img
+        src="/images/context-garage/bootstrap/bootstrap-progress.png"
+        alt="Bootstrap progress page with stages for reading Catalog metadata, identifying dimension and fact columns, materializing semantic files, and finalizing the repo"
+      />
+    </Frame>
+
+  </Step>
+</Steps>
+
+## Review and edit files
+
+Use the file navigator to open generated files and review the YAML.
+
+Common first edits include:
+
+- Update dataset and field descriptions
+- Mark important fields as dimensions, facts, or time dimensions
+- Add relationships between datasets
+- Add shared metrics
+
+<Frame caption="Use the Build view to inspect and edit the generated YAML files.">
+  <img
+    src="/images/context-garage/build/file-editor.png"
+    alt="Context Garage file navigator with a dataset YAML file open in the editor"
+  />
+</Frame>
+
+## Publish a version
+
+When the draft is ready, publish it.
+
+<Steps>
+  <Step title="Open the publish flow">
+    Click **Publish** from the repo editor.
+  </Step>
+
+<Step title="Review generated artifacts">
+  Review the generated OSI and target-specific artifacts, such as Cortex YAML.
+</Step>
+
+  <Step title="Publish">
+    Add an optional message and click **Publish version**. Sidecar creates the next immutable version, such as `v0` or `v1`.
+
+    <Frame caption="Publishing creates the next immutable version from the current draft.">
+      <img
+        src="/images/context-garage/publish/publish-version.png"
+        alt="Publish dialog showing generated artifacts and the next version number"
+      />
+    </Frame>
+
+  </Step>
+</Steps>
+
+## Serve the published version
+
+After publishing, choose how to use the version.
+
+<CardGroup cols={2}>
+  <Card title="Download YAML" icon="download">
+    Download the generated OSI or target-specific YAML for a self-managed
+    workflow.
+  </Card>
+  <Card title="Serve through MCP" icon="robot">
+    Create an MCP deploy surface and generate a token for AI tools that support
+    MCP.
+  </Card>
+  <Card title="Deploy to Snowflake Cortex" icon="snowflake">
+    Create a Cortex deploy surface to push the generated semantic view YAML to
+    Snowflake.
+  </Card>
+  <Card title="Track latest" icon="rotate">
+    Configure a deploy surface to track the latest published version so new
+    versions are served automatically.
+  </Card>
+</CardGroup>
+
+<Frame caption="Deploy surfaces let published versions be served to downstream tools.">
+  <img
+    src="/images/context-garage/deploy/deploy-surfaces.png"
+    alt="Deploy surfaces page with MCP, Cortex, and download options"
+  />
+</Frame>
+
+## Keep the repo current
+
+As your catalog changes, return to the asset selector to update what the repo tracks.
+
+When you save selection changes:
+
+- Newly selected tables are added to the draft
+- Unselected tables are removed from the draft
+- Existing dataset files remain in place
+- Future inclusion rules continue to add matching new assets
+
+Publish a new version when the draft is ready for downstream tools.

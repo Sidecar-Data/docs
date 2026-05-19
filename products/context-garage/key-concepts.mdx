@@ -1,0 +1,74 @@
+---
+title: Context Garage key concepts
+description: "Learn how Context Garage turns your data catalog into versioned semantic context for analytics and AI tools"
+icon: "warehouse"
+---
+
+Context Garage helps you create, edit, publish, and serve semantic context for your data. It starts from your Sidecar catalog, generates a repo of YAML files, and lets you maintain that repo directly in the browser.
+
+## Context repo
+
+A context repo is the file-backed workspace for one semantic context project.
+
+The repo contains files such as:
+
+- `sidecar_repo.yml` for repo settings and file locations
+- `datasets/*.osi.yml` for datasets and fields
+- `relationships/_relationships.yml` for joins between datasets
+- `metrics/_metrics.yml` for shared metric definitions
+
+The files are the authoring state. When you edit a dataset, relationship, or metric, you are editing the repo files, not a separate intermediate model.
+
+## Draft
+
+A draft is the mutable version of the repo. Changes from file edits, asset selection updates, and catalog syncs are saved to the draft until you publish them.
+
+Use the draft to review generated files, make manual edits, and confirm the repo is ready before creating an immutable version.
+
+## Version
+
+A version is an immutable snapshot of the repo, named with a simple increment such as `v0`, `v1`, or `v2`.
+
+Publishing a draft creates the next version. Published versions can be downloaded, served by MCP, or deployed to supported targets such as Snowflake Cortex.
+
+## Generated artifacts
+
+When you publish or preview a repo, Sidecar can generate export artifacts from the repo files.
+
+Common artifacts include:
+
+- Source OSI, which preserves the Sidecar-native repo representation
+- Clean OSI, which is the normalized OSI representation for consumption
+- Cortex YAML, which is formatted for Snowflake semantic views
+
+These artifacts are generated from the files in the repo. They are not hand-maintained separately.
+
+## Deploy surface
+
+A deploy surface is a durable target that serves a published version.
+
+Examples include:
+
+- An MCP endpoint used by AI tools
+- A Snowflake Cortex semantic view target
+
+A deploy surface can track the latest published version or pin to a specific version.
+
+## Deployment
+
+A deployment is the event of applying a published version to one or more deploy surfaces.
+
+Deployments capture what version was served, which surface received it, whether the rollout succeeded, and any target-specific result metadata.
+
+## Download
+
+Download is an export action, not a deploy surface. You can download a published version when you need the generated YAML for a self-managed workflow.
+
+## Catalog sync
+
+Context Garage can keep a repo aligned with selected catalog assets.
+
+You can update the selected assets later. New selected tables are added to the draft, removed tables are deleted from the draft, and existing dataset files are left in place so manual edits are not overwritten.
+
+Future inclusion rules can also add newly discovered catalog assets that match your selected scope.
+

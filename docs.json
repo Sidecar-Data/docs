@@ -23,6 +23,18 @@
         ]
       },
       {
+        "tab": "Products",
+        "groups": [
+          {
+            "group": "Context Garage",
+            "pages": [
+              "products/context-garage/key-concepts",
+              "products/context-garage/quickstart"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Integrations",
         "groups": [
           {
