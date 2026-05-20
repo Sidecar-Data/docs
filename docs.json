@@ -31,6 +31,14 @@
               "products/context-garage/key-concepts",
               "products/context-garage/quickstart"
             ]
+          },
+          {
+            "group": "Agents",
+            "pages": [
+              "products/agents/contract-agent",
+              "products/agents/sidecar-engineer/jira-quickstart",
+              "products/agents/sidecar-engineer/slack-quickstart"
+            ]
           }
         ]
       },
@@ -86,8 +94,7 @@
           {
             "group": "Other",
             "pages": [
-              "integrations/other/sidecar-mcp",
-              "integrations/other/contract-agent"
+              "integrations/other/sidecar-mcp"
             ]
           }
         ]

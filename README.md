@@ -34,6 +34,9 @@ docs/
 ├── docs.json                          # Mintlify config (nav, theme, branding)
 ├── index.mdx                          # Landing page
 ├── quickstart.mdx                     # Quickstart guide
+├── products/
+│   ├── context-garage/                # Context Garage guides
+│   └── agents/                        # Contract Agent and Sidecar Engineer guides
 └── integrations/
     ├── data-warehouses/               # Snowflake, BigQuery, Redshift, Databricks
     ├── transformation/                # dbt Cloud, dbt Core
@@ -41,7 +44,7 @@ docs/
     ├── extract-load/                  # Fivetran
     ├── communication/                 # Slack, Microsoft Teams
     ├── project-management/            # Jira, Linear
-    └── other/                         # Sidecar MCP, Contract Agent
+    └── other/                         # Sidecar MCP
 ```
 
 ## Screenshots
@@ -49,5 +52,3 @@ docs/
 <img width="2438" height="1433" alt="image" src="https://github.com/user-attachments/assets/0fc7a120-f844-40e4-9fdc-4742c2f5dd98" />
 
 <img width="2296" height="1439" alt="image" src="https://github.com/user-attachments/assets/8c11ee7f-35e9-43c7-bff2-d792ed047528" />
-
-
