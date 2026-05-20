@@ -15,10 +15,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": [
-              "index",
-              "quickstart"
-            ]
+            "pages": ["index", "quickstart"]
           }
         ]
       },
@@ -73,9 +70,7 @@
           },
           {
             "group": "Extract & Load",
-            "pages": [
-              "integrations/extract-load/fivetran"
-            ]
+            "pages": ["integrations/extract-load/fivetran"]
           },
           {
             "group": "Communication",
@@ -93,9 +88,7 @@
           },
           {
             "group": "Other",
-            "pages": [
-              "integrations/other/sidecar-mcp"
-            ]
+            "pages": ["integrations/other/sidecar-mcp"]
           }
         ]
       }
