@@ -1,0 +1,76 @@
+---
+title: Contract Agent quickstart
+description: "Set up Sidecar's GitHub-integrated PR reviewer for data contract changes"
+icon: "file-contract"
+---
+
+Use this guide to install the Contract Agent and verify that it reviews pull requests for data contract changes.
+
+## What is the Contract Agent?
+
+The Contract Agent is a GitHub-integrated PR reviewer that automatically analyzes pull requests for data contract changes. When a PR modifies dbt models or schema files, the Contract Agent evaluates the downstream impact and posts a review comment.
+
+## Prerequisites
+
+- A Sidecar account with the **Contract Agent** feature enabled
+- **Account Admin** role in Sidecar
+- **dbt** connected to Sidecar
+- **Admin access** to the GitHub repository you want to monitor
+
+## 1. Install the GitHub App
+
+1. In the Sidecar app, go to the **Integrations** page.
+2. Find the **GitHub** integration.
+3. Click **Configure Contract Agent in GitHub**.
+4. You will be redirected to GitHub to install the Sidecar GitHub App.
+5. Select the organization and repositories you want the Contract Agent to monitor.
+6. Click **Install**.
+
+## 2. Verify the installation
+
+Create a test pull request that modifies a dbt model or schema file. After a few moments:
+
+1. A **check run** should appear on the PR.
+2. A **review comment** should be posted with the Contract Agent's analysis.
+
+<Note>
+  The Contract Agent's findings are informational. They do not result in a failing GitHub Check.
+</Note>
+
+## Managing the installation
+
+### Add or remove repositories
+
+1. Go to your GitHub organization's **Settings** > **GitHub Apps**.
+2. Find the **Sidecar** app and click **Configure**.
+3. Under **Repository access**, add or remove repositories as needed.
+
+### Pause the Contract Agent
+
+To temporarily stop the Contract Agent from reviewing PRs, contact the Sidecar team via your dedicated Slack channel.
+
+### Uninstall
+
+1. Go to your GitHub organization's **Settings** > **GitHub Apps**.
+2. Find the **Sidecar** app and click **Configure**.
+3. Click **Uninstall**.
+
+## Troubleshooting
+
+<Accordion title="Check run not appearing">
+  - Verify the GitHub App is installed on the correct repository.
+  - Ensure the PR modifies a dbt model or schema file that Sidecar tracks.
+  - Check that the Contract Agent feature is enabled in your Sidecar account.
+</Accordion>
+
+<Accordion title="Check run shows 'Skipped'">
+  The Contract Agent determined that the PR does not contain changes relevant to data contracts. No action is needed.
+</Accordion>
+
+<Accordion title="Check run shows 'Failure'">
+  This indicates an internal error. Contact the Sidecar team via your dedicated Slack channel or at [support@sidecardata.com](mailto:support@sidecardata.com).
+</Accordion>
+
+<Accordion title="Reviews are too noisy">
+  If the Contract Agent is flagging too many changes, reach out to the Sidecar team to tune the sensitivity for your project.
+</Accordion>

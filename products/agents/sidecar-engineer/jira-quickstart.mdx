@@ -1,0 +1,153 @@
+---
+title: Sidecar Engineer for Jira quickstart
+description: "Start Sidecar Engineer by assigning a Jira issue to Sidecar"
+icon: "jira"
+---
+
+Use Sidecar Engineer for Jira when your team wants Sidecar to work from a Jira issue and report progress back in Jira comments.
+
+## Before you start
+
+You need:
+
+- A Sidecar workspace with Jira connected
+- A dedicated Jira identity for Sidecar
+- The Sidecar Jira identity assigned to the target Jira projects
+- The Sidecar GitHub App installed on repositories Sidecar may update
+- A Jira webhook configured for Sidecar Engineer events
+
+<Note>
+  Sidecar can publish a preliminary plan without repository access, but it
+  cannot implement code changes until the Sidecar GitHub App is installed on the
+  relevant repositories.
+</Note>
+
+## Set up Jira
+
+<Steps>
+  <Step title="Create a Sidecar Jira identity">
+    Create an Atlassian service account for Sidecar.
+
+    If you cannot use a service account, create a separate Atlassian account with a distinct email address or alias. Do not reuse a human user's Atlassian account.
+
+  </Step>
+
+  <Step title="Create an API token">
+    Create a Jira API token for the Sidecar identity.
+
+    The token needs effective access for:
+
+    - `read:jira-user`
+    - `read:jira-work`
+    - `write:jira-work`
+
+  </Step>
+
+  <Step title="Connect Jira in Sidecar">
+    In Sidecar, connect Jira with the Sidecar Jira identity's email, API token, and Jira cloud ID.
+
+    Sidecar uses that Jira identity to detect assignments, recognize real `@Sidecar` mentions, and post plan or delivery comments.
+
+  </Step>
+
+<Step title="Grant project access">
+  In every Jira project where Sidecar should work, grant the Sidecar identity
+  permission to browse issues, be assigned issues, and add comments.
+</Step>
+
+  <Step title="Create the Jira webhook">
+    In Jira, go to **Settings** > **System** > **WebHooks** and create a webhook.
+
+    Use this URL:
+
+    ```text
+    https://service-platform.sidecardata.com/api/v1/tools/webhooks/jira/managed-agents/
+    ```
+
+    Select these events:
+
+    - `jira:issue_updated`
+    - `comment_created`
+    - `comment_updated`
+
+    Scope the webhook to the projects where Sidecar should work. If your Jira webhook configuration supports field filters, restrict issue updates to assignee changes.
+
+  </Step>
+
+  <Step title="Add a webhook secret">
+    Configure a shared secret or HMAC signing secret for the webhook, then save the same secret in the Sidecar Jira integration.
+  </Step>
+</Steps>
+
+## Start work
+
+<Steps>
+  <Step title="Create or update the Jira issue">
+    Add the request, acceptance criteria, and relevant constraints to the issue.
+
+    You do not need to name the target repository unless the request is ambiguous.
+
+  </Step>
+
+  <Step title="Assign the issue to Sidecar">
+    Assign the issue to the dedicated **Sidecar** Jira identity.
+
+    This starts Sidecar's first analysis turn when there is not already an open Sidecar workflow for that issue.
+
+  </Step>
+
+  <Step title="Wait for Sidecar's comment">
+    Sidecar comments with a plan, clarification question, setup blocker, validation failure, or pull request link.
+
+    No separate approval comment is required before implementation. If the request is clear and setup is ready, Sidecar can start implementation automatically.
+
+  </Step>
+
+  <Step title="Reply with new instructions">
+    Add a new comment that explicitly mentions Sidecar.
+
+    ```text
+    @Sidecar preserve backward compatibility for the existing dashboard
+    ```
+
+    Create a new comment for each clarification or rework request. Do not edit an old comment to give new instructions.
+
+  </Step>
+
+  <Step title="Review the pull request">
+    When implementation succeeds, Sidecar comments with one or more pull request links.
+
+    Review, request changes, and merge through your normal GitHub process.
+
+  </Step>
+</Steps>
+
+## Behavior to know
+
+- Comments without a Sidecar mention are ignored by the agent.
+- Editing old comments is audit-only in this version.
+- Editing issue fields does not wake Sidecar by itself. Add a new `@Sidecar ...` comment after changing the issue.
+- Moving the assignee away from Sidecar does not cancel an existing workflow.
+- Later `@Sidecar ...` comments can trigger clarification, rework, or another implementation pass.
+- If a rework request expands scope or changes the repository set, Sidecar runs analysis again before making more code changes.
+- If implementation spans multiple repositories, Sidecar groups the pull request links in one Jira comment.
+
+## Troubleshooting
+
+<Accordion title="Assignment does not start work">
+  Confirm the issue was assigned to the dedicated Sidecar Jira identity, the
+  webhook includes `jira:issue_updated`, the webhook secret matches Sidecar's
+  Jira integration, and the Sidecar identity can browse and comment in the
+  project.
+</Accordion>
+
+<Accordion title="Sidecar does not respond to a comment">
+  Add a new comment that explicitly mentions Sidecar. Comments without a Sidecar
+  mention and edited old comments do not drive the workflow.
+</Accordion>
+
+<Accordion title="Sidecar reports setup blocked">
+  Follow the blocker in Sidecar's comment. The most common blocker is missing
+  Sidecar GitHub App access for the repository Sidecar needs to inspect or
+  update.
+</Accordion>

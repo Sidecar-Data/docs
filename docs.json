@@ -15,10 +15,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": [
-              "index",
-              "quickstart"
-            ]
+            "pages": ["index", "quickstart"]
           }
         ]
       },
@@ -30,6 +27,14 @@
             "pages": [
               "products/context-garage/key-concepts",
               "products/context-garage/quickstart"
+            ]
+          },
+          {
+            "group": "Agents",
+            "pages": [
+              "products/agents/contract-agent",
+              "products/agents/sidecar-engineer/jira-quickstart",
+              "products/agents/sidecar-engineer/slack-quickstart"
             ]
           }
         ]
@@ -65,9 +70,7 @@
           },
           {
             "group": "Extract & Load",
-            "pages": [
-              "integrations/extract-load/fivetran"
-            ]
+            "pages": ["integrations/extract-load/fivetran"]
           },
           {
             "group": "Communication",
@@ -85,10 +88,7 @@
           },
           {
             "group": "Other",
-            "pages": [
-              "integrations/other/sidecar-mcp",
-              "integrations/other/contract-agent"
-            ]
+            "pages": ["integrations/other/sidecar-mcp"]
           }
         ]
       }
