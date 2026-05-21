@@ -1,0 +1,150 @@
+---
+title: Ask Sidecar with Snowflake query execution
+description: "Enable Ask Sidecar to run read-only queries against your Snowflake warehouse"
+icon: "snowflake"
+---
+
+Ask Sidecar can query your Snowflake warehouse directly to answer data questions in natural language. This guide walks through the setup.
+
+## How Snowflake MCP works
+
+Snowflake supports [MCP Servers](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp) as a native database object. An MCP Server is created once inside a Snowflake database by an admin, and it exposes a read-only SQL execution tool that any authorized Snowflake user can call.
+
+The setup has two parts:
+
+1. **Admin (once per org):** Create the MCP Server object in Snowflake and verify it in Sidecar. This makes query execution available to your organization.
+2. **Each user:** Connect a personal Snowflake Programmatic Access Token (PAT). Queries run under each user's own Snowflake identity, so existing role-based access controls are respected.
+
+## Prerequisites
+
+To complete the admin steps you need:
+
+1. The [Snowflake integration](/integrations/data-warehouses/snowflake) connected in Sidecar
+2. Account Admin permissions in Sidecar
+3. The ACCOUNTADMIN role in Snowflake
+
+Individual users only need a Snowflake account that can generate a PAT.
+
+## Admin setup
+
+These steps are performed once per organization.
+
+### 1. Open the Ask Sidecar tab
+
+1. In the Sidecar app, go to **Integrations** > **Snowflake**.
+2. Switch to the **Ask Sidecar** tab.
+
+<Note>
+  This tab is only available after Snowflake credentials have been saved on the Connection tab.
+</Note>
+
+### 2. Choose a database
+
+The MCP Server object will be created inside a Snowflake database. The default is `SIDECAR_DATABASE`, the same database created during the Snowflake integration setup.
+
+If you'd like to use a different database, enter the name and click **Confirm** before continuing.
+
+### 3. Run the setup SQL in Snowflake
+
+Sidecar generates the SQL you need to run. Click the copy button and execute the following in a Snowflake worksheet:
+
+```sql
+USE ROLE ACCOUNTADMIN;
+
+CREATE OR REPLACE MCP SERVER <DATABASE>.PUBLIC.SIDECARMCPSERVER
+FROM SPECIFICATION $$
+tools:
+  - name: "executesql"
+    type: "SYSTEM_EXECUTE_SQL"
+    title: "SQL Execution"
+    description: "Execute read-only SQL queries against Snowflake."
+    config:
+      read_only: true
+$$;
+
+GRANT USAGE ON MCP SERVER <DATABASE>.PUBLIC.SIDECARMCPSERVER TO ROLE PUBLIC;
+
+DESCRIBE MCP SERVER <DATABASE>.PUBLIC.SIDECARMCPSERVER;
+```
+
+Replace `<DATABASE>` with the database name from Step 2 (e.g., `SIDECAR_DATABASE`). The Sidecar UI pre-fills this for you.
+
+This SQL does three things:
+
+1. Creates an MCP Server object named `SIDECARMCPSERVER` with a single read-only SQL execution tool.
+2. Grants usage on the MCP Server to the `PUBLIC` role so all users in your Snowflake account can authenticate against it with their own PAT.
+3. Runs `DESCRIBE` to confirm the object was created.
+
+<Warning>
+  The `GRANT USAGE ... TO ROLE PUBLIC` statement allows all Snowflake users to access the MCP Server. If you need to restrict access, grant to a specific role instead.
+</Warning>
+
+### 4. Verify the MCP Server
+
+Back in Sidecar, click **Verify MCP Server**. Sidecar connects to your warehouse and runs `DESCRIBE MCP SERVER` to confirm the object exists.
+
+Once verified, a green checkmark appears and the per-user token setup section becomes available for all users in your organization.
+
+## Per-user setup
+
+Once the admin has created the MCP Server object, each user connects their own Snowflake PAT. This is what allows Ask Sidecar to run queries on your behalf, under your Snowflake identity.
+
+### 5. Generate a Programmatic Access Token (PAT)
+
+1. Log in to Snowflake and click your user icon in the bottom left.
+2. Navigate to **Settings** > **Authentication** > **Programmatic access tokens**.
+3. Click **Generate token**, select a validity period, then click **Generate**.
+4. Copy the token immediately. It is only shown once.
+
+<Note>
+  You may need to update your Snowflake network policy rules to allow connections from Sidecar's infrastructure.
+</Note>
+
+### 6. Connect the token in Sidecar
+
+1. In the Sidecar app, go to **Integrations** > **Snowflake** > **Ask Sidecar** tab.
+2. Paste your PAT into the **Programmatic Access Token** field.
+3. Click **Connect**.
+
+Open **Ask Sidecar** from the sidebar and start asking questions. The agent can now run read-only SQL queries against your Snowflake warehouse on your behalf.
+
+## Managing your connection
+
+### Disconnect your token
+
+1. Go to **Integrations** > **Snowflake** > **Ask Sidecar** tab.
+2. Click **Disconnect**.
+
+You can reconnect at any time by generating a new PAT and repeating Step 6.
+
+### Rotate your token
+
+Disconnect the current token, generate a new one in Snowflake, and connect the new token.
+
+## How queries are executed
+
+When you ask a data question, Ask Sidecar's agent decides whether a Snowflake query would help answer it. If so:
+
+1. The agent writes a SQL query. Only `SELECT`, `WITH`, `SHOW`, and `DESCRIBE` statements are allowed.
+2. The query runs against your Snowflake warehouse using your PAT. Your Snowflake role determines what data is accessible.
+3. Results come back to the agent, which interprets and summarizes them in the chat.
+
+All queries are read-only. The MCP Server is provisioned with `read_only: true` in Snowflake, and Sidecar enforces this independently at the proxy layer.
+
+## Troubleshooting
+
+<Accordion title="'Your admin needs to enable Snowflake MCP' message">
+  The MCP Server object has not been created in Snowflake yet, or it hasn't been verified in Sidecar. Ask your Sidecar admin to complete the admin setup steps above.
+</Accordion>
+
+<Accordion title="Verify MCP Server fails">
+  Confirm you ran the setup SQL as ACCOUNTADMIN and that the database name in the SQL matches the name shown in Sidecar. The `DESCRIBE MCP SERVER` statement at the end of the SQL should return results without errors. If it doesn't, the MCP Server object was not created.
+</Accordion>
+
+<Accordion title="PAT connection fails">
+  Make sure your token is a Programmatic Access Token (from Settings > Authentication > Programmatic access tokens), not an OAuth token or password. Check that your Snowflake network policy allows connections from Sidecar. If the token was copied incorrectly, generate a new one since PATs cannot be retrieved after creation.
+</Accordion>
+
+<Accordion title="Queries return no results or access errors">
+  Queries run under your Snowflake identity. If you can't see certain tables in Ask Sidecar, check that your Snowflake role has SELECT access to those tables.
+</Accordion>

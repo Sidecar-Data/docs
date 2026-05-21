@@ -32,6 +32,7 @@
           {
             "group": "Agents",
             "pages": [
+              "products/agents/ask-sidecar-snowflake",
               "products/agents/contract-agent",
               "products/agents/sidecar-engineer/jira-quickstart",
               "products/agents/sidecar-engineer/slack-quickstart"
