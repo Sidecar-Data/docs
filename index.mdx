@@ -35,6 +35,38 @@ Each integration guide walks you through setup step by step.
   </Card>
 </CardGroup>
 
+## Metadata-Only Access
+
+By default, Sidecar operates in a metadata-only mode. This means Sidecar does not query or access the underlying data in your warehouse. Instead, we work with metadata about your stack, such as:
+
+- Table and column names
+- Schema structure
+- Lineage and dependencies
+- dbt metadata
+- Query history metadata
+- Operational signals and usage patterns
+
+Our goal is to build context about how your data platform works without requiring access to the data itself.
+
+### Exceptions
+
+The primary exception is optional automated dbt test generation. If enabled, Sidecar may query limited warehouse data in order to automatically generate and validate common dbt tests, including:
+
+- Primary key tests
+- Not null tests
+- Unique tests
+- Accepted values tests
+
+This functionality is optional and can be disabled at any time.
+
+### Business Context Integrations
+
+Sidecar can also integrate with tools like Slack and Jira. These integrations help enrich the context layer with institutional and business knowledge that typically does not exist in metadata alone.
+
+In some cases, Slack may also be used purely for operational notifications and alert delivery. In those scenarios, Sidecar does not need to ingest Slack conversation history or message content.
+
+When enabled for contextual enrichment, data from these systems is used solely to improve discovery, lineage understanding, operational awareness, and AI-assisted workflows within Sidecar. These context-enrichment capabilities can be disabled if preferred.
+
 ## Need Help?
 
 If you run into any issues during setup, reach out to us at [support@sidecardata.com](mailto:support@sidecardata.com) or via your dedicated Slack channel.
