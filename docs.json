@@ -30,6 +30,13 @@
             ]
           },
           {
+            "group": "Agent Console",
+            "pages": [
+              "products/agent-console/overview",
+              "products/agent-console/builder"
+            ]
+          },
+          {
             "group": "Agents",
             "pages": [
               "products/agents/ask-sidecar-snowflake",
