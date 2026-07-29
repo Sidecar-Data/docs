@@ -1,0 +1,122 @@
+---
+title: Create your first Agent Console job
+sidebarTitle: Quickstart
+description: "Create and run a Builder job that makes a reviewable documentation change"
+icon: "rocket"
+---
+
+In this quickstart, you create a manual Builder job that updates documentation in one repository and opens a pull request for review.
+
+## Before you start
+
+You need:
+
+- An Account Admin role in Sidecar
+- Agent Console enabled for your workspace
+- A connected GitHub or GitLab repository where you can safely make a documentation change
+- Permission to review pull or merge requests in that repository
+
+If the repository is not connected, complete [Connect repositories](/products/agent-console/setup/connect-repositories) first.
+
+## Create the job
+
+<Steps>
+  <Step title="Open Builder">
+    In Sidecar, select **Agents**, then select **Builder**.
+
+    Builder does not ship with presets, so you create this job from scratch.
+
+    <Frame caption="Open Builder, then click New job.">
+      <img
+        src="/images/agent-console/quickstart/open-builder.png"
+        alt="Builder agent page with the New job button"
+      />
+    </Frame>
+  </Step>
+
+  <Step title="Start a new job">
+    Click **New job**.
+
+    Enter these values:
+
+    | Setting | Value |
+    | --- | --- |
+    | **Name** | `Update repository documentation` |
+    | **Description** | `Correct one small documentation issue and open a pull request.` |
+    | **Instructions** | Use the example below. |
+    | **Repositories** | Select one repository. |
+    | **Delivery** | **Open a pull request** |
+    | **Trigger** | **Manual** |
+
+    ```text
+    Review the repository documentation for one small, clearly incorrect or
+    outdated statement. Correct it, preserve the existing style, and validate
+    any affected links or formatting. Do not change application code.
+    ```
+
+    Selecting one repository keeps the first run focused. An empty repository selection means all currently accessible repositories.
+
+    <Frame caption="Populate the job and select one repository for the first run.">
+      <img
+        src="/images/agent-console/quickstart/new-builder-job.png"
+        alt="New Builder job populated with documentation instructions and one selected repository"
+      />
+    </Frame>
+  </Step>
+
+  <Step title="Create the job">
+    Click **Create job**. Sidecar opens the job configuration page.
+  </Step>
+
+  <Step title="Review the job settings">
+    Confirm these settings before the first run:
+
+    - **Scope** contains only the repository you selected.
+    - **Completion and output** is set to **Open a pull request**.
+    - **Schedule and trigger** is set to **Manual**.
+    - **MCP servers** can stay at its default. This task does not require an MCP server.
+    - **Tool permissions** is set to **Autonomous**.
+
+    Autonomous mode lets gateable tools run without pausing. Core repository tools are always available. You can use **Supervised** for later jobs when you want gateable web or MCP tools to require Account Admin approval.
+
+    <Frame caption="Review the job's scope, trigger, MCP access, and tool permissions before running it.">
+      <img
+        src="/images/agent-console/quickstart/review-job-settings.png"
+        alt="Builder job configuration with repository scope, Manual trigger, MCP server selection, and Autonomous permissions"
+      />
+    </Frame>
+  </Step>
+
+  <Step title="Run the job">
+    Click **Run now**.
+
+    Sidecar opens the run detail page. The run moves from **Queued** to **Running** while Builder reads the repository, makes the change, and validates it.
+
+    <Frame caption="The run detail page updates while Builder is working.">
+      <img
+        src="/images/agent-console/quickstart/run-in-progress.png"
+        alt="Running scheduled Builder job with its first turn visible"
+      />
+    </Frame>
+  </Step>
+
+  <Step title="Review the result">
+    When the run finishes, open its artifact. Review the pull request and its checks before merging.
+
+    Builder never merges its own changes.
+
+    <Frame caption="Open the source-control artifact when the run succeeds.">
+      <img
+        src="/images/agent-console/run-artifacts.png"
+        alt="Succeeded Builder run with a pull request artifact and final answer"
+      />
+    </Frame>
+  </Step>
+</Steps>
+
+## Next steps
+
+- Learn how to [create jobs from presets](/products/agent-console/jobs/create-a-job#from-a-preset).
+- [Connect an MCP server](/integrations/mcp-servers/connect-an-mcp-server), then [give an agent access](/products/agent-console/setup/give-agents-mcp-access).
+- [Create a schedule](/products/agent-console/jobs/configure-a-job#schedule-and-trigger) for recurring work.
+- [Run an agent from Slack](/products/agent-console/run-an-agent-from-slack) for an ad hoc request.

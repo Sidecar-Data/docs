@@ -1,0 +1,62 @@
+---
+title: Give agents MCP access
+description: "Grant registered MCP servers to agents and select the servers each job can use"
+icon: "key"
+---
+
+Register an MCP server once, grant it to an agent, and then choose whether each job can use it.
+
+If the server is not registered yet, follow [Connect an MCP server](/integrations/mcp-servers/connect-an-mcp-server).
+
+## Grant a server to an agent
+
+1. In Sidecar, select **Agents**.
+2. Open the agent that needs the server.
+3. Click **Settings**.
+4. Under **Scope → Connected tools**, select the MCP server.
+
+Changes save automatically. A status dot shows the server's latest known health.
+
+<Frame caption="Selecting a server under Connected tools grants it to the agent.">
+  <img
+    src="/images/agent-console/setup/agent-mcp-grant.png"
+    alt="Builder settings with Snowflake selected under Connected tools"
+  />
+</Frame>
+
+The grant sets the maximum MCP access for that agent. Jobs cannot enable a server that the agent has not been granted.
+
+<Warning>
+  Removing a grant also removes that server from the agent's job selections and
+  tool-permission exceptions.
+</Warning>
+
+## Select servers for a job
+
+1. Open the agent's job.
+2. Find **MCP servers**.
+3. Leave all granted servers enabled, or clear the servers this job should not use.
+
+By default, a job uses all MCP servers currently granted to its agent. This includes servers granted later. Once you create an explicit selection, the job uses only that saved subset.
+
+<Frame caption="A job can enable any MCP server granted to its agent.">
+  <img
+    src="/images/agent-console/setup/job-mcp-selection.png"
+    alt="Builder job with Snowflake enabled in the MCP servers section and Autonomous tool permissions"
+  />
+</Frame>
+
+## Configure approvals for an MCP server
+
+MCP permissions apply to the entire server rather than individual discovered tools.
+
+Under **Tool permissions**:
+
+- **Autonomous** lets gateable tools run automatically. Add an MCP server as an exception when that server should pause for approval.
+- **Supervised** pauses gateable tools for Account Admin approval. Add an MCP server as an exception when that server may run automatically.
+
+Core repository tools remain available in either mode. See [Runs and approvals](/products/agent-console/jobs/runs-and-approvals#approvals) for the approval flow.
+
+## Slack runs
+
+A Slack run can use every MCP server granted to the selected agent. It uses the permissions under the agent's **Settings → Run defaults**, not a job's MCP selection or permissions.

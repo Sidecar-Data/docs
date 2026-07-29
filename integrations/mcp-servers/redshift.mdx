@@ -1,0 +1,149 @@
+---
+title: Redshift MCP
+description: "Connect a hosted Amazon Redshift MCP server to Sidecar agents"
+icon: "aws"
+---
+
+Native Redshift MCP setup in Sidecar is coming soon. Today, you can register a
+remote Redshift MCP endpoint through Sidecar's custom connector.
+
+AWS Labs publishes an [Amazon Redshift MCP
+Server](https://awslabs.github.io/mcp/servers/redshift-mcp-server) that discovers
+provisioned clusters and serverless workgroups, explores metadata, and runs
+single-statement read-only queries.
+
+## Plan the deployment
+
+The AWS Labs setup starts the server as a local `stdio` process. Sidecar cannot
+run that command. To use it with Agent Console, deploy it behind a service or
+bridge that provides:
+
+- An HTTPS MCP Streamable HTTP endpoint
+- A stable bearer token for Sidecar
+- Access to AWS through an IAM role or another AWS credential-provider-chain method
+- Network access to the Redshift Data API and any required private resources
+
+The finished URL should look like `https://redshift-mcp.example.com/mcp`. It
+must meet Sidecar's [custom endpoint
+requirements](/integrations/mcp-servers/connect-an-mcp-server#requirements-for-a-custom-endpoint).
+
+<Warning>
+  Do not expose the local AWS Labs server directly to the internet and do not
+  place long-lived AWS access keys in Sidecar's **Bearer token** field. That
+  field authenticates Sidecar to your MCP gateway, not the gateway to AWS.
+</Warning>
+
+## Configure AWS access
+
+Attach a dedicated IAM role to the hosted MCP workload. The AWS Labs server
+documents these permissions as its starting point:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "redshift:DescribeClusters",
+        "redshift-serverless:ListWorkgroups",
+        "redshift-serverless:GetWorkgroup",
+        "redshift-data:ExecuteStatement",
+        "redshift-data:DescribeStatement",
+        "redshift-data:GetStatementResult",
+        "redshift-serverless:GetCredentials",
+        "redshift:GetClusterCredentialsWithIAM",
+        "redshift:GetClusterCredentials"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+Scope the resources and conditions more narrowly for your environment where the
+AWS actions support it. In the workload, set the region explicitly—for example,
+`AWS_REGION=us-east-1`. Prefer an attached IAM role over static
+`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` values.
+
+## Configure database access
+
+IAM permission to call the Redshift Data API does not grant access to data.
+Create a least-privilege database identity with `USAGE` on allowed schemas and
+`SELECT` on allowed tables and views.
+
+The [Redshift warehouse integration guide](/integrations/data-warehouses/redshift)
+includes SQL for a read-only `sidecar_user`, schema grants, future-table grants,
+and a grant-statement generator. Reuse it only when the MCP server should have
+the same access as Sidecar's metadata integration.
+
+Avoid granting `CREATEUSER` solely for the AWS Labs `review_cluster` tool. The
+AWS Labs guide notes that this tool needs elevated system-view access. Omit or
+filter it at your hosted MCP layer when agents only need metadata discovery and
+read-only queries. If you cannot filter it, leave the elevated privileges
+ungranted so the tool cannot perform the review.
+
+## Validate the server before hosting
+
+Use the official local configuration to confirm AWS and Redshift permissions
+before adding the HTTP bridge:
+
+```json
+{
+  "mcpServers": {
+    "awslabs.redshift-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.redshift-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "sidecar-redshift-mcp",
+        "AWS_REGION": "us-east-1",
+        "FASTMCP_LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}
+```
+
+This configuration is for local validation only. The value you register in
+Sidecar must be the hosted Streamable HTTP URL, not this command.
+
+## Register the hosted endpoint
+
+1. In Sidecar, select **Integrations → MCP Servers**.
+2. Click **Add MCP**, then select **Custom server**.
+3. Enter values like these:
+
+| Field | Example |
+|---|---|
+| **Display name** | `Redshift — Analytics` |
+| **Name** | `redshift_analytics` |
+| **Server URL** | `https://redshift-mcp.example.com/mcp` |
+| **Bearer token** | The stable token accepted by your MCP gateway |
+
+4. Click **Add server**.
+5. Confirm that the server status is **Connected** and review the discovered tools.
+
+{/* TODO: Add a screenshot of a connected Redshift custom MCP row. Save it as `/images/integrations/mcp-servers/redshift-connected.png`. */}
+
+Continue by [granting the server to an agent and selecting it for
+jobs](/products/agent-console/setup/give-agents-mcp-access).
+
+## Troubleshooting
+
+<Accordion title="Sidecar reports the server as unreachable">
+  Confirm that you registered the public or privately routable HTTPS `/mcp`
+  endpoint. A local `uvx` command or `localhost` URL is not reachable from
+  Sidecar. Check the gateway's TLS certificate, firewall, and request timeout.
+</Accordion>
+
+<Accordion title="The server connects but cannot find clusters">
+  Check the workload's AWS region and IAM permissions for provisioned Redshift
+  and Redshift Serverless discovery. Confirm that the attached IAM role is the
+  identity the server is actually using.
+</Accordion>
+
+<Accordion title="Queries fail after clusters are discovered">
+  Check the Data API credential actions and the Redshift database user's
+  `USAGE` and `SELECT` grants. Cluster discovery and database query access use
+  separate permissions.
+</Accordion>

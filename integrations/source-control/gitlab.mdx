@@ -1,0 +1,44 @@
+---
+title: GitLab
+description: "Connect GitLab repositories to Sidecar through OAuth"
+icon: "gitlab"
+---
+
+Connect GitLab to let Sidecar read accessible repositories and deliver Agent Console branches and merge requests.
+
+## Before you start
+
+You need an Account Admin role in Sidecar and a GitLab account with access to the target repositories.
+
+Sidecar supports `gitlab.com`. Self-managed GitLab instances are not supported by this integration.
+
+## Connect GitLab
+
+<Steps>
+  <Step title="Open GitLab in Integrations">
+    In Sidecar, select **Integrations**, then open **GitLab**.
+
+    <Frame caption="Start the GitLab OAuth flow from the disconnected integration page.">
+      <img
+        src="/images/integrations/source-control/gitlab-disconnected.png"
+        alt="Disconnected GitLab integration with Connect GitLab with OAuth button"
+      />
+    </Frame>
+  </Step>
+
+  <Step title="Authorize Sidecar">
+    Click **Connect GitLab with OAuth**. Review the requested access in GitLab and authorize Sidecar.
+  </Step>
+
+  <Step title="Return to Sidecar">
+    Sidecar completes verification and displays the connected GitLab identity.
+  </Step>
+</Steps>
+
+To refresh the authorization later, click **Reconnect GitLab**.
+
+## Verify Agent Console access
+
+Open an agent's **Settings** page and check **Scope → Repositories**. See [Connect repositories](/products/agent-console/setup/connect-repositories) for job-scope behavior.
+
+{/* TODO: Add a screenshot of the connected GitLab integration and identity. Save it as `/images/integrations/source-control/gitlab-connected.png`. */}

@@ -1,0 +1,78 @@
+---
+title: Run an agent from Slack
+description: "Send an ad hoc Agent Console request by direct message to the Sidecar Slack app"
+icon: "slack"
+---
+
+Send a direct message to the Sidecar Slack app when you need an agent to handle an ad hoc request without creating a job.
+
+<Warning>
+  Agent Console requests are supported only in direct messages. Messages and
+  mentions in Slack channels do not start Agent Console runs.
+</Warning>
+
+## Before you start
+
+Your workspace must have the [Sidecar Slack app connected](/integrations/communication/slack).
+
+Any human member of the connected Slack workspace can start a run. You do not need a linked Sidecar user account to send the request.
+
+## Send a request
+
+<Steps>
+  <Step title="Open the Sidecar app in Slack">
+    In Slack, find **Sidecar** under **Apps** and open its direct-message conversation.
+  </Step>
+
+  <Step title="Describe the work">
+    Send a plain-text request. You do not need to mention the app or name an agent.
+
+    Include the target, expected result, and relevant constraints. For example:
+
+    ```text
+    Investigate why the orders freshness check failed this morning. Identify the
+    most likely cause and recommend the smallest safe next step. Do not change
+    code or data.
+    ```
+
+    {/* TODO: Add a screenshot of a direct message to the Sidecar Slack app containing the example request. Save it as `/images/agent-console/slack/new-request.png`. */}
+  </Step>
+
+  <Step title="Continue in the thread">
+    Reply in the same Slack thread when the agent asks for clarification or when you want to add context. Follow-up messages stay attached to the same run and do not select a different agent.
+
+    {/* TODO: Add a screenshot of a Sidecar DM thread with an agent response and a human follow-up. Save it as `/images/agent-console/slack/follow-up.png`. */}
+  </Step>
+</Steps>
+
+## How Sidecar chooses an agent
+
+Sidecar classifies the first message against the agents available to your workspace. It falls back to Builder when the request is empty, classification fails, or no agent reaches the confidence threshold.
+
+Sidecar does not show a persona-selection prompt. Write the request clearly when you want a specialist, such as Reliability for an incident or Optimization for warehouse cost analysis.
+
+## Settings used by Slack runs
+
+The selected agent's **Settings → Run defaults** supply its delivery mode and tool permissions. The run can use every MCP server granted under **Connected tools**.
+
+See [Configure agent defaults](/products/agent-console/setup/configure-agent-defaults).
+
+## View the run in Agent Console
+
+Slack-started runs appear in the Agent Console with Slack as their origin. Account Admins can open the run, inspect its transcript, cancel it, and manage approvals.
+
+Sending a Slack request does not grant the sender access to Agent Console.
+
+## Approve from Slack
+
+When a gateable tool pauses, Sidecar can send approval controls in Slack. The approver must:
+
+- Link their Slack identity when prompted
+- Belong to the same Sidecar workspace
+- Have the Account Admin role
+
+The link is single use and expires after 15 minutes. It identifies the Slack user; it does not grant a role or make an approval decision.
+
+See [Runs and approvals](/products/agent-console/jobs/runs-and-approvals#approvals) for approval behavior.
+
+{/* TODO: Add a screenshot of an approval request in a Sidecar DM with the account-link prompt or approval controls. Save it as `/images/agent-console/slack/approval.png`. */}

@@ -1,0 +1,36 @@
+---
+title: Provide knowledge to agents
+description: "Add company context, policies, and playbooks to the Knowledge Store"
+icon: "book-open"
+---
+
+Agent Console automatically makes your synchronized Knowledge Store available to agent runs. You do not attach knowledge to individual agents or jobs.
+
+## Initialize the Knowledge Store
+
+1. In Sidecar, select **Context → Knowledge Store**.
+2. If no store exists, click **Initialize Knowledge Store**.
+3. Wait for the bootstrap to finish. You can leave the page while it runs.
+
+{/* TODO: Add a screenshot of the Knowledge Store empty state with Initialize Knowledge Store highlighted. Save it as `/images/agent-console/setup/initialize-knowledge-store.png`. */}
+
+## Add useful context
+
+Create or upload Markdown, text, or YAML files. Good candidates include:
+
+- Company and product terminology
+- Data ownership and escalation policies
+- Engineering conventions
+- Incident-response playbooks
+- Metric definitions and business nuances
+
+Organize related files into folders so people can maintain them over time.
+
+{/* TODO: Add a screenshot of the Knowledge Store file tree and editor. Save it as `/images/agent-console/setup/knowledge-store.png`. */}
+
+<Note>
+  A missing Knowledge Store does not block a run. The agent continues without
+  that context.
+</Note>
+
+Context Garage is separate from the Knowledge Store. It publishes structured data context to downstream tools; it is not a general per-job knowledge attachment.

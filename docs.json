@@ -23,6 +23,50 @@
         "tab": "Products",
         "groups": [
           {
+            "group": "Agent Console",
+            "pages": [
+              "products/agent-console/overview",
+              "products/agent-console/quickstart",
+              {
+                "group": "Agents",
+                "root": "products/agent-console/agents/choose-an-agent",
+                "expanded": true,
+                "pages": [
+                  "products/agent-console/agents/builder",
+                  "products/agent-console/agents/reliability",
+                  "products/agent-console/agents/optimization",
+                  "products/agent-console/agents/custodian"
+                ]
+              },
+              {
+                "group": "Set up",
+                "root": "products/agent-console/setup/overview",
+                "pages": [
+                  "products/agent-console/setup/connect-repositories",
+                  "products/agent-console/setup/connect-dbt",
+                  "products/agent-console/setup/give-agents-mcp-access",
+                  "products/agent-console/setup/provide-knowledge",
+                  "products/agent-console/setup/configure-agent-defaults"
+                ]
+              },
+              {
+                "group": "Jobs",
+                "pages": [
+                  "products/agent-console/jobs/create-a-job",
+                  "products/agent-console/jobs/configure-a-job",
+                  "products/agent-console/jobs/runs-and-approvals"
+                ]
+              },
+              "products/agent-console/run-an-agent-from-slack",
+              {
+                "group": "Recipes",
+                "pages": [
+                  "products/agent-console/recipes/custodian-downstream-impact-review"
+                ]
+              }
+            ]
+          },
+          {
             "group": "Context Garage",
             "pages": [
               "products/context-garage/key-concepts",
@@ -30,19 +74,11 @@
             ]
           },
           {
-            "group": "Agent Console",
-            "pages": [
-              "products/agent-console/overview",
-              "products/agent-console/builder"
-            ]
-          },
-          {
             "group": "Agents",
             "pages": [
               "products/agents/ask-sidecar-snowflake",
               "products/agents/contract-agent",
-              "products/agents/sidecar-engineer/jira-quickstart",
-              "products/agents/sidecar-engineer/slack-quickstart"
+              "products/agents/sidecar-engineer/jira-quickstart"
             ]
           }
         ]
@@ -50,6 +86,13 @@
       {
         "tab": "Integrations",
         "groups": [
+          {
+            "group": "Source control",
+            "pages": [
+              "integrations/source-control/github",
+              "integrations/source-control/gitlab"
+            ]
+          },
           {
             "group": "Data Warehouses",
             "pages": [
@@ -88,15 +131,22 @@
             ]
           },
           {
+            "group": "MCP",
+            "pages": [
+              "integrations/mcp-servers/connect-an-mcp-server",
+              "integrations/mcp-servers/snowflake",
+              "integrations/mcp-servers/bigquery",
+              "integrations/mcp-servers/databricks",
+              "integrations/mcp-servers/redshift",
+              "integrations/other/sidecar-mcp"
+            ]
+          },
+          {
             "group": "Project Management",
             "pages": [
               "integrations/project-management/jira",
               "integrations/project-management/linear"
             ]
-          },
-          {
-            "group": "Other",
-            "pages": ["integrations/other/sidecar-mcp"]
           }
         ]
       }
@@ -116,6 +166,16 @@
       ]
     }
   },
+  "redirects": [
+    {
+      "source": "/products/agent-console/builder",
+      "destination": "/products/agent-console/agents/builder"
+    },
+    {
+      "source": "/products/agents/sidecar-engineer/slack-quickstart",
+      "destination": "/products/agent-console/run-an-agent-from-slack"
+    }
+  ],
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"

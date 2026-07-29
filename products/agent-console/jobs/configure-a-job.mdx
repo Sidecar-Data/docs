@@ -1,0 +1,100 @@
+---
+title: Configure a job
+description: "Manage job instructions, scope, delivery, triggers, MCP access, and tool permissions"
+icon: "sliders"
+---
+
+Open a job from its agent page to review its complete configuration. Custom jobs expose all standard settings. Presets keep product-owned settings read-only.
+
+<Frame caption="A custom job keeps its instructions, resources, trigger, output, and permissions on one configuration page.">
+  <img
+    src="/images/agent-console/jobs/job-configuration.png"
+    alt="Full Builder job configuration with instructions, scope, trigger, output, MCP servers, and tool permissions"
+  />
+</Frame>
+
+## Active state
+
+Use the active toggle in the job header to pause or resume a job. A paused job does not run manually or on its configured trigger. Pausing does not cancel a run already in progress.
+
+## Instructions
+
+Instructions define the work performed on every run. You can edit instructions for custom jobs. Preset instructions are read-only.
+
+## Repository scope
+
+Custom jobs can use:
+
+- **All repositories** — Sidecar resolves every currently accessible repository when each run starts.
+- A selected subset — the job uses only the saved repositories.
+
+If a selected repository loses integration access, the job becomes unready until you restore access or update the scope.
+
+Some preset jobs use no repositories or treat them as optional. Their resource contract is read-only.
+
+## Completion and output
+
+Custom job options include:
+
+- **Open a pull request**
+- **Push to a branch**
+- **Text response in Agent Console**
+
+Some presets use **Diagnosis and draft pull request**. Custodian uses a fixed source-control review delivery.
+
+## Schedule and trigger
+
+Custom jobs support **Manual** and **Scheduled** triggers. For a scheduled job, choose:
+
+- **Intervals** — every 1, 2, 3, 4, 6, 8, or 12 hours
+- **Specific hours** — selected days and hours in an IANA timezone
+- **Cron expression** — a five-field cron schedule with an explicit timezone
+
+Scheduled jobs can still run through **Run now**. Changing a scheduled job to Manual removes its schedule.
+
+Preset and template triggers are read-only. They can include monitor events or GitHub pull-request webhooks.
+
+<Frame caption="Scheduled jobs use an explicit schedule type, expression, and timezone.">
+  <img
+    src="/images/agent-console/jobs/scheduled-trigger.png"
+    alt="Scheduled trigger editor with cron expression and America Los Angeles timezone"
+  />
+</Frame>
+
+## MCP servers
+
+The **MCP servers** section lists servers granted to the agent. All granted servers are enabled by default. You can narrow the job to an explicit subset or disable them all.
+
+Follow [Give agents MCP access](/products/agent-console/setup/give-agents-mcp-access) for the complete registration, grant, and job-selection model.
+
+## Tool permissions
+
+Choose how gateable tools behave:
+
+- **Autonomous** — gateable tools run without approval unless listed as exceptions.
+- **Supervised** — gateable tools pause for Account Admin approval unless listed as exceptions.
+
+Exceptions can include web tools and whole MCP servers. Switching modes clears the current exception list after confirmation. Core repository tools always remain available.
+
+## Resource readiness
+
+Sidecar checks the resources required by the job. A missing required repository or warehouse MCP blocks the run. Optional resources do not block it.
+
+MCP health is informational. A structurally valid warehouse MCP can satisfy readiness even if its latest health check shows a warning; the run still fails if the server cannot be used.
+
+## Notifications
+
+Notifications control where job and approval events are delivered. Keep the current configuration unless your Sidecar contact has provided a supported notification route.
+
+## Preset restrictions
+
+For a preset job, you can change only:
+
+- Active state
+- MCP server selection
+- Tool permissions
+- Notifications
+
+Sidecar owns all other fields.
+
+Custodian copies use a specialized configuration page. See the [Custodian recipe](/products/agent-console/recipes/custodian-downstream-impact-review).

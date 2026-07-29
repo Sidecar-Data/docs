@@ -1,0 +1,36 @@
+---
+title: Connect dbt context
+description: "Connect dbt metadata and the matching code repository for Agent Console"
+icon: "diagram-project"
+---
+
+A dbt integration gives Sidecar project metadata, tests, run results, and lineage. It does not give an agent access to your dbt code.
+
+Most dbt workflows need two independent connections:
+
+1. Connect dbt Core or dbt Cloud for metadata.
+2. Connect GitHub or GitLab for repository access.
+
+## Connect dbt metadata
+
+Use the guide for your deployment:
+
+<CardGroup cols={2}>
+  <Card title="dbt Core" icon="terminal" href="/integrations/transformation/dbt-core">
+    Upload `manifest.json` and `run_results.json` manually or from CI.
+  </Card>
+  <Card title="dbt Cloud" icon="cloud" href="/integrations/transformation/dbt-cloud">
+    Connect an organization service account to the dbt Cloud APIs.
+  </Card>
+</CardGroup>
+
+## Connect the code repository
+
+Follow [Connect repositories](/products/agent-console/setup/connect-repositories), then confirm that the repository containing the dbt project appears under the agent's **Settings → Scope**.
+
+When you configure a dbt-focused job, select that repository explicitly. This lets the agent connect Sidecar's dbt evidence to the code it can inspect or change.
+
+<Note>
+  A report-only job may use dbt evidence without a repository. A job that needs
+  to prepare a code change must have repository access.
+</Note>
