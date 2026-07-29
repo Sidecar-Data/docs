@@ -1,0 +1,58 @@
+---
+title: GitHub
+description: "Connect GitHub repositories to Sidecar with the Sidecar Data GitHub app"
+icon: "github"
+---
+
+Connect GitHub to let Sidecar read selected repositories and deliver Agent Console branches and pull requests.
+
+## Before you start
+
+You need an Account Admin role in Sidecar and permission to install or request a GitHub app for the target organization.
+
+## Connect GitHub
+
+<Steps>
+  <Step title="Open GitHub in Integrations">
+    In Sidecar, select **Integrations**, then open **GitHub**.
+
+    {/* TODO: Add a screenshot of the GitHub integration page before connection. Save it as `/images/integrations/source-control/github-disconnected.png`. */}
+  </Step>
+
+  <Step title="Start the installation">
+    Click **Link Sidecar Data**. Sidecar sends you to GitHub.
+  </Step>
+
+  <Step title="Choose repository access">
+    Select the GitHub organization and grant access to the repositories Sidecar should use.
+
+    If the organization requires approval, request the installation from a GitHub organization administrator.
+  </Step>
+
+  <Step title="Return to Sidecar">
+    Complete the GitHub flow. Sidecar records the installation and displays the connected account.
+  </Step>
+</Steps>
+
+## Change repository access
+
+Return to **Integrations → GitHub** and click **Configure integration in GitHub**. Update the repository selection in GitHub.
+
+Uninstalling the app or removing a repository can make existing jobs unready.
+
+## Verify Agent Console access
+
+Open an agent's **Settings** page and check **Scope → Repositories**. See [Connect repositories](/products/agent-console/setup/connect-repositories) for job-scope behavior.
+
+## Custodian access
+
+Custodian uses an additional GitHub app installation for upstream subscriptions. The **Custodian** section on the GitHub integration page shows its installations and repository access.
+
+Follow the [Custodian downstream-impact review recipe](/products/agent-console/recipes/custodian-downstream-impact-review) before binding upstream repositories.
+
+<Frame caption="The GitHub page shows the connected Sidecar Data installation and Custodian access separately.">
+  <img
+    src="/images/integrations/source-control/github-connected.png"
+    alt="Connected GitHub integration with Sidecar Data account and Custodian installation status"
+  />
+</Frame>

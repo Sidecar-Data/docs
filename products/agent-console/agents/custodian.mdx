@@ -1,0 +1,36 @@
+---
+title: Custodian
+description: "Use Custodian to review upstream pull requests for downstream data impact"
+icon: "shield-check"
+---
+
+Custodian reviews an upstream GitHub pull request and traces evidence-supported effects into one downstream repository. It can post a structured source-control review and, when configured, prepare a small downstream remediation for human review.
+
+Custodian does not use the standard custom-job workflow. You duplicate its immutable **Review changes for downstream impacts** template and configure the copy.
+
+## Requirements
+
+You need:
+
+- The Custodian GitHub app installed with access to the upstream repository
+- The upstream repository bound to Custodian
+- The standard Sidecar GitHub integration connected to the downstream repository
+- One upstream and one downstream repository that are different
+
+The trigger and delivery mode are fixed. The job runs when a pull request changes in the configured upstream repository. It does not have **Run now**.
+
+Follow the [Custodian downstream-impact review recipe](/products/agent-console/recipes/custodian-downstream-impact-review) to configure the complete workflow.
+
+<Frame caption="Custodian starts from an immutable downstream-impact review template.">
+  <img
+    src="/images/agent-console/jobs/custodian-template.png"
+    alt="Custodian downstream-impact review template with Duplicate button"
+  />
+</Frame>
+
+<Frame caption="Custodian settings list the repositories available for upstream subscriptions.">
+  <img
+    src="/images/agent-console/agents/custodian-subscriptions.png"
+    alt="Custodian settings with repository access, connected tools, and an empty subscribed repositories section"
+  />
+</Frame>

@@ -1,0 +1,47 @@
+---
+title: Connect repositories
+description: "Give Agent Console access to repositories through GitHub or GitLab"
+icon: "git-branch"
+---
+
+Agent Console gets repository access from your source-control integration. Connect the provider once, then choose all repositories or a subset when you create a job.
+
+Choose your provider:
+
+<CardGroup cols={2}>
+  <Card title="Connect GitHub" icon="github" href="/integrations/source-control/github">
+    Install and configure the Sidecar Data GitHub app.
+  </Card>
+  <Card title="Connect GitLab" icon="gitlab" href="/integrations/source-control/gitlab">
+    Authorize Sidecar through GitLab OAuth.
+  </Card>
+</CardGroup>
+
+<Note>
+  Agent Console uses one source-control provider for repository operations. If
+  both GitHub and GitLab are connected, Agent Console uses GitLab.
+</Note>
+
+## Verify repository access
+
+1. In Sidecar, select **Agents**.
+2. Open an agent.
+3. Click **Settings**.
+4. Review **Scope → Repositories**.
+
+The list reflects the repositories currently available through the connected provider. Change access in GitHub or GitLab, then return to Sidecar to refresh the list.
+
+<Frame caption="An agent's Scope lists repositories currently available from source control.">
+  <img
+    src="/images/agent-console/setup/repository-scope.png"
+    alt="Builder settings with connected repositories listed under Scope"
+  />
+</Frame>
+
+## How jobs use repository scope
+
+When you create a custom job, an empty **Repositories** selection means all accessible repositories. Sidecar resolves that list again when the job runs, so newly connected repositories join the scope automatically.
+
+For a narrower and more predictable job, select only the repositories it needs. See [Configure a job](/products/agent-console/jobs/configure-a-job#repository-scope).
+
+Custodian uses a separate upstream subscription in addition to the standard GitHub integration. Follow the [Custodian recipe](/products/agent-console/recipes/custodian-downstream-impact-review) for that workflow.

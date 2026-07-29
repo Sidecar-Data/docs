@@ -1,0 +1,131 @@
+---
+title: Connect an MCP server
+description: "Register and manage MCP servers that Sidecar agents can use"
+icon: "plug"
+---
+
+Register an MCP server at the workspace level before granting it to an Agent Console agent. You can connect a custom endpoint or enable MCP for a supported native integration.
+
+<Info>
+  This workflow connects external MCP servers to Sidecar agents. To connect the
+  Sidecar MCP server to an external AI client, see [Use Sidecar MCP in an AI
+  client](/integrations/other/sidecar-mcp).
+</Info>
+
+You must be an Account Admin to manage MCP servers.
+
+## Warehouse MCP guides
+
+<CardGroup cols={2}>
+  <Card title="Snowflake MCP" icon="snowflake" href="/integrations/mcp-servers/snowflake">
+    Use Sidecar's native Snowflake MCP setup.
+  </Card>
+  <Card title="BigQuery MCP" icon="google" href="/integrations/mcp-servers/bigquery">
+    Connect a compatible remote BigQuery MCP endpoint.
+  </Card>
+  <Card title="Databricks MCP" icon="bolt" href="/integrations/mcp-servers/databricks">
+    Register a Databricks managed MCP server.
+  </Card>
+  <Card title="Redshift MCP" icon="aws" href="/integrations/mcp-servers/redshift">
+    Host or bridge a Redshift MCP server for Sidecar.
+  </Card>
+</CardGroup>
+
+## Requirements for a custom endpoint
+
+Sidecar's custom connector expects the exact MCP endpoint URL to:
+
+- Support the MCP Streamable HTTP transport
+- Be reachable from Sidecar's infrastructure
+- Accept a static token in the `Authorization: Bearer <token>` header
+- Support MCP initialization and `tools/list`
+- Respond to connection checks within 30 seconds
+
+Use HTTPS for every production endpoint. A local `stdio` command, an SSE-only
+URL, or a server that requires an interactive OAuth flow cannot be registered
+directly.
+
+## Add a server
+
+1. In Sidecar, select **Integrations**.
+2. Open the **MCP Servers** tab.
+3. Click **Add MCP**.
+
+<Frame caption="Choose a native connector or add a custom MCP server.">
+  <img
+    src="/images/integrations/mcp-servers/registry.png"
+    alt="Add an MCP server dialog with native connector and custom server options"
+  />
+</Frame>
+
+Choose a setup method.
+
+<Tabs>
+  <Tab title="Custom server">
+    Select **Custom server**, then enter:
+
+    - **Display name** — the label people see in Sidecar
+    - **Name** — a stable machine-readable name
+    - **Server URL** — the full Streamable HTTP MCP endpoint
+    - **Bearer token** — the workspace credential Sidecar sends to the server
+
+    Click **Add server**.
+
+    <Frame caption="Use a stable name, the complete HTTPS endpoint, and a write-only bearer token.">
+      <img
+        src="/images/integrations/mcp-servers/custom-server-form.png"
+        alt="Custom MCP server form with example display name, machine name, HTTPS URL, and bearer token"
+      />
+    </Frame>
+  </Tab>
+
+  <Tab title="Snowflake">
+    Connect [Snowflake](/integrations/data-warehouses/snowflake) first. In **Add MCP**, select **Snowflake** to open its MCP setup.
+
+    Paste a programmatic access token for a Snowflake service user. Do not use a personal token. Sidecar derives the server URL from the integration.
+  </Tab>
+
+  <Tab title="dbt Cloud">
+    Connect [dbt Cloud](/integrations/transformation/dbt-cloud) first. In **Add MCP**, select **dbt Cloud** to open its MCP setup.
+
+    Paste an organization-wide dbt Cloud service token. Do not use a personal token. Sidecar derives the server URL from the integration.
+  </Tab>
+</Tabs>
+
+BigQuery, Databricks, and Redshift appear as coming soon for native MCP setup.
+You can still register a compatible endpoint as a custom server. Follow the
+warehouse-specific guides above for supported endpoints and authentication
+constraints.
+
+## What happens when you save
+
+Sidecar stores the token as a write-only workspace credential, probes the endpoint, and requests its tool list. The token is never displayed again.
+
+The server row is saved even when the initial probe reports an authentication or reachability warning. Resolve the warning before depending on the server in a job.
+
+## Manage a server
+
+Use the server row actions to:
+
+- **Check now** — check endpoint reachability without retrieving the stored credential
+- **Refresh tools** — re-enter the token and request the tool list again
+- **Replace token** — replace the write-only credential and repeat tool discovery
+- **Edit** — change a custom server's display name or URL
+- **Delete** — remove the server from the workspace
+
+<Note>
+  **Check now** confirms reachability. Because Sidecar cannot read the stored
+  token back, this check does not prove that the credential is valid. Use
+  **Refresh tools** to test with a token.
+</Note>
+
+Changing a custom server URL requires you to re-enter its bearer token. URLs derived from Snowflake or dbt Cloud are not editable.
+
+<Warning>
+  Deleting a server removes its agent grants, job selections, and
+  tool-permission exceptions.
+</Warning>
+
+## Give an agent access
+
+Registration does not grant the server to any agent. Continue with [Give agents MCP access](/products/agent-console/setup/give-agents-mcp-access).

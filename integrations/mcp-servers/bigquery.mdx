@@ -1,0 +1,133 @@
+---
+title: BigQuery MCP
+description: "Connect a remote BigQuery MCP endpoint to Sidecar agents"
+icon: "google"
+---
+
+Native BigQuery MCP setup in Sidecar is coming soon. Today, you can register a
+BigQuery MCP server through Sidecar's custom connector.
+
+## Choose a server
+
+Google provides two official options:
+
+- The [managed BigQuery MCP server](https://docs.cloud.google.com/bigquery/docs/use-bigquery-mcp)
+  at `https://bigquery.googleapis.com/mcp`
+- The open source [MCP Toolbox for Databases](https://mcp-toolbox.dev/documentation/connect-to/ides/bigquery_mcp/),
+  which you host and configure
+
+<Warning>
+  The managed BigQuery endpoint requires Google OAuth. Google access tokens
+  normally expire after one hour, while Sidecar's custom connector stores one
+  static bearer token and does not refresh it. Do not use a temporary `gcloud`
+  access token for scheduled Agent Console jobs.
+</Warning>
+
+For a durable connection today, host MCP Toolbox or another compatible
+BigQuery MCP server behind an HTTPS endpoint that accepts a stable bearer token.
+The endpoint must meet the [custom endpoint
+requirements](/integrations/mcp-servers/connect-an-mcp-server#requirements-for-a-custom-endpoint).
+
+## Prepare the Google Cloud identity
+
+Use a dedicated service account for the hosted MCP server. The server can use
+Application Default Credentials from that identity instead of storing a service
+account key.
+
+This example creates an identity with project-wide query and read access:
+
+```bash
+PROJECT_ID="analytics-prod"
+SERVICE_ACCOUNT="sidecar-bigquery-mcp"
+
+gcloud iam service-accounts create "$SERVICE_ACCOUNT" \
+  --project="$PROJECT_ID" \
+  --display-name="Sidecar BigQuery MCP"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/bigquery.user"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$SERVICE_ACCOUNT@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/bigquery.dataViewer"
+```
+
+Project-level `roles/bigquery.dataViewer` can read every dataset in the project.
+Grant it at the dataset level instead when agents should see only selected
+datasets. See the official [BigQuery IAM
+roles](https://cloud.google.com/bigquery/docs/access-control) and [MCP Toolbox
+BigQuery requirements](https://mcp-toolbox.dev/reference/prebuilt-tools/#bigquery).
+
+If you already created the service account and custom role in the [Sidecar
+BigQuery integration guide](/integrations/data-warehouses/bigquery), you can
+reuse that identity only when its scope matches the access you want agents to
+have.
+
+## Host and secure the endpoint
+
+Follow Google's [Cloud Run deployment guide for MCP
+Toolbox](https://mcp-toolbox.dev/documentation/deploy-to/cloud-run/) or deploy
+the server on your own infrastructure.
+
+Use these values as a starting point:
+
+| Setting | Example |
+|---|---|
+| `BIGQUERY_PROJECT` | `analytics-prod` |
+| `BIGQUERY_LOCATION` | `US` |
+| Streamable HTTP path | `/mcp` |
+| Production URL | `https://bigquery-mcp.example.com/mcp` |
+| Runtime identity | `sidecar-bigquery-mcp@analytics-prod.iam.gserviceaccount.com` |
+
+MCP Toolbox's prebuilt BigQuery configuration includes tools that can modify
+data and Google describes prebuilt configurations as build-time tools. For
+Agent Console jobs, expose a purpose-built read-only toolset or enforce
+read-only access with IAM and dataset permissions. Review the [BigQuery MCP tool
+reference](https://docs.cloud.google.com/bigquery/docs/reference/mcp) before
+making tools available to agents.
+
+Your gateway must validate the bearer value Sidecar sends and forward the
+request to the MCP server. Do not expose an unauthenticated Toolbox endpoint to
+the internet.
+
+## Register the endpoint in Sidecar
+
+1. In Sidecar, select **Integrations → MCP Servers**.
+2. Click **Add MCP**, then select **Custom server**.
+3. Enter values like these:
+
+| Field | Example |
+|---|---|
+| **Display name** | `BigQuery` |
+| **Name** | `bigquery` |
+| **Server URL** | `https://bigquery-mcp.example.com/mcp` |
+| **Bearer token** | The stable token accepted by your gateway |
+
+4. Click **Add server**.
+5. Confirm that the server status is **Connected** and review the discovered tools.
+
+{/* TODO: Add a screenshot of a connected BigQuery custom MCP row and its discovered tools. Save it as `/images/integrations/mcp-servers/bigquery-connected.png`. */}
+
+Continue by [granting the server to an agent and selecting it for
+jobs](/products/agent-console/setup/give-agents-mcp-access).
+
+## Troubleshooting
+
+<Accordion title="The managed Google endpoint becomes unauthorized">
+  A pasted Google OAuth access token has expired. Use a hosted endpoint with a
+  durable bearer-authentication layer, or wait for Sidecar's native BigQuery MCP
+  integration. Replacing the token manually is suitable only for a short test.
+</Accordion>
+
+<Accordion title="Sidecar cannot discover tools">
+  Confirm that the URL ends at the Streamable HTTP endpoint, normally `/mcp`,
+  rather than the Toolbox service root. Verify that your gateway preserves the
+  MCP request and accepts Sidecar's `Authorization` header.
+</Accordion>
+
+<Accordion title="Queries are denied">
+  Check the IAM roles on the MCP server's runtime service account and the
+  dataset-level access policies. The identity needs permission to create query
+  jobs in the billing project and read the referenced tables.
+</Accordion>

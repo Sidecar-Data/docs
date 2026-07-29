@@ -1,0 +1,97 @@
+---
+title: Snowflake MCP
+description: "Give Sidecar agents read-only query access through a Snowflake-managed MCP server"
+icon: "snowflake"
+---
+
+Sidecar provides native setup for Snowflake MCP. The Agent Console reuses the
+Snowflake-managed MCP server created for Ask Sidecar, but it authenticates with
+an organization-wide service-user token.
+
+<Info>
+  A personal PAT on the **Ask Sidecar** tab applies only to that person. The PAT
+  on the **MCP** tab is shared by Agent Console jobs. Use a service user for the
+  Agent Console credential.
+</Info>
+
+## Before you start
+
+You need:
+
+- Account Admin permissions in Sidecar
+- A connected [Snowflake integration](/integrations/data-warehouses/snowflake)
+- A verified Snowflake MCP server, following the admin steps in [Ask Sidecar with Snowflake query execution](/products/agents/ask-sidecar-snowflake#admin-setup)
+- A Snowflake service user whose role can query only the warehouses, databases, and schemas agents need
+
+The Sidecar setup creates `SIDECARMCPSERVER` in the `PUBLIC` schema of your
+selected Sidecar database. It exposes one `executesql` tool with Snowflake's
+`read_only` option enabled. See Snowflake's
+[CREATE MCP SERVER reference](https://docs.snowflake.com/en/sql-reference/sql/create-mcp-server)
+for the underlying object and tool specification.
+
+## Create the organization PAT
+
+You can reuse the `SIDECAR_USER` service user from the [Snowflake integration
+setup](/integrations/data-warehouses/snowflake#2-create-a-user-role-and-database-for-sidecar),
+or create a separate service user with narrower data access.
+
+The following example creates a 90-day PAT for the existing Sidecar service
+user and restricts it to `SIDECAR_ROLE`:
+
+```sql
+ALTER USER IF EXISTS SIDECAR_USER
+  ADD PROGRAMMATIC ACCESS TOKEN SIDECAR_AGENT_CONSOLE
+  ROLE_RESTRICTION = 'SIDECAR_ROLE'
+  DAYS_TO_EXPIRY = 90
+  COMMENT = 'Sidecar Agent Console warehouse access';
+```
+
+Copy the `token_secret` value from the result. Snowflake shows it only once.
+Change the expiration to comply with your authentication policy.
+
+Snowflake requires a role restriction for service-user PATs by default. Your
+network and authentication policies must also permit the token. See Snowflake's
+[programmatic access token guide](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens)
+for policy requirements, token generation, and rotation.
+
+## Enable Snowflake MCP in Sidecar
+
+1. In Sidecar, select **Integrations**.
+2. Open **Snowflake**, then select the **MCP** tab.
+3. Click **Enable MCP**.
+4. Paste the service user's PAT into **Service account PAT (organization-wide)**.
+5. Click **Add server**.
+
+Sidecar derives the endpoint from the Snowflake account identifier and the
+database selected during MCP server setup. It then connects to the server and
+discovers its tools.
+
+{/* TODO: Add a screenshot of the Snowflake MCP tab with Enable MCP highlighted. Save it as `/images/integrations/mcp-servers/snowflake-enable.png`. */}
+
+## Finish agent setup
+
+Registering the server does not give it to an agent automatically. [Grant the
+Snowflake MCP server to an agent and select it for jobs](/products/agent-console/setup/give-agents-mcp-access).
+
+Rotate the PAT before it expires. In **Integrations → MCP Servers**, open the
+Snowflake row and select **Replace token**.
+
+## Troubleshooting
+
+<Accordion title="The MCP tab says to set up the Snowflake MCP server first">
+  Complete the [Snowflake MCP admin setup](/products/agents/ask-sidecar-snowflake#admin-setup)
+  on the **Ask Sidecar** tab. Run the generated SQL, then click **Verify MCP
+  Server** before returning to the **MCP** tab.
+</Accordion>
+
+<Accordion title="The PAT is rejected">
+  Confirm that the token belongs to a service user, its role restriction names a
+  role granted to that user, and the token has not expired. If Snowflake applies
+  a network policy, it must allow requests from Sidecar's infrastructure.
+</Accordion>
+
+<Accordion title="Queries fail with access errors">
+  The PAT's restricted role controls data access. Grant that role `USAGE` on the
+  required warehouse, database, and schemas, plus `SELECT` on the required
+  tables and views. Do not grant broader access than the agents need.
+</Accordion>
