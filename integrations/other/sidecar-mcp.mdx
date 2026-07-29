@@ -1,10 +1,53 @@
 ---
 title: Sidecar MCP
-description: "Connect the Sidecar MCP server to your AI IDE"
+description: "Connect the Sidecar MCP server to Claude, Cursor, and other AI tools"
 icon: "robot"
 ---
 
-## 1. Create a Token
+The Sidecar MCP server gives AI agents live access to your data catalog: dbt models, warehouse tables, dashboards, column-level lineage, and your team's knowledge base. Ask "what feeds the revenue dashboard?" or "what breaks if I change this column?" and the agent answers from the same cross-tool context Sidecar has.
+
+**Server URL:** `https://service-mcp.sidecardata.com/sidecar/mcp`
+
+## Connect with OAuth (recommended)
+
+No token needed — you'll be prompted to log in with your Sidecar account in the browser.
+
+<Tabs>
+  <Tab title="Claude Code">
+    Run the following command in your terminal:
+
+    ```bash
+    claude mcp add --transport http sidecar-mcp https://service-mcp.sidecardata.com/sidecar/mcp
+    ```
+
+    Then run `/mcp` inside a Claude Code session and follow the login prompt.
+  </Tab>
+  <Tab title="Claude (web)">
+    1. In [claude.ai](https://claude.ai), go to **Settings → Connectors**.
+    2. Click **Add custom connector**.
+    3. Paste `https://service-mcp.sidecardata.com/sidecar/mcp` and click **Add**.
+    4. Click **Connect** and log in with your Sidecar account.
+  </Tab>
+  <Tab title="Cursor">
+    1. Open **Cursor Settings → MCP** and add a new server with URL `https://service-mcp.sidecardata.com/sidecar/mcp`.
+    2. Cursor detects OAuth support — click **Login** and approve access in the browser.
+  </Tab>
+  <Tab title="VS Code">
+    Run the following command in your terminal:
+
+    ```bash
+    code --add-mcp '{"name":"sidecar-mcp","type":"http","url":"https://service-mcp.sidecardata.com/sidecar/mcp"}'
+    ```
+
+    Start the server from the **Extensions** view or when prompted in chat; VS Code walks you through the OAuth login.
+  </Tab>
+</Tabs>
+
+## Connect with a token
+
+Use a token for clients without OAuth support, service accounts, or CI.
+
+### 1. Create a token
 
 1. In the Sidecar app, navigate to the **Users** tab.
 2. Click the **Tokens** tab.
@@ -17,18 +60,25 @@ icon: "robot"
   The token is only visible once. Copy it and store it in a safe place.
 </Warning>
 
-## 2. Connect to Your AI IDE
+### 2. Configure your client
 
 <Tabs>
-  <Tab title="Cursor">
-    1. Click the **Add to Cursor** button in the Sidecar app. This will auto-fill the required parameters.
-    2. Click **Install** in Cursor to complete the setup.
+  <Tab title="Codex">
+    Add the following to `~/.codex/config.toml`. The Codex CLI and IDE extension share this file:
+
+    ```toml
+    [mcp_servers.sidecar]
+    url = "https://service-mcp.sidecardata.com/sidecar/mcp"
+    bearer_token_env_var = "SIDECAR_MCP_TOKEN"
+    ```
+
+    Then set `SIDECAR_MCP_TOKEN` in your shell environment to the token you created in Step 1.
   </Tab>
   <Tab title="Claude Code">
     Run the following command in your terminal:
 
     ```bash
-    claude mcp add --transport http sidecar-mcp https://service-mcp.sidecardata.com/mcp \
+    claude mcp add --transport http sidecar-mcp https://service-mcp.sidecardata.com/sidecar/mcp \
       --header "Authorization: Bearer scp_mcp_rest_of_generated_token"
     ```
 
@@ -39,9 +89,45 @@ icon: "robot"
 
     | Field | Value |
     |-------|-------|
-    | **URL** | `https://service-mcp.sidecardata.com/mcp` |
+    | **URL** | `https://service-mcp.sidecardata.com/sidecar/mcp` |
     | **Authorization** | `Bearer scp_mcp_rest_of_generated_token` |
 
     Replace `scp_mcp_rest_of_generated_token` with the token you created in Step 1.
   </Tab>
 </Tabs>
+
+## What you can ask
+
+Once connected, try prompts like:
+
+- *"What data do we have about customers?"*
+- *"What feeds the revenue dashboard, and when did its sources last refresh?"*
+- *"If I change `orders.customer_id`, what breaks downstream?"*
+
+## Available tools
+
+| Tool | What it does |
+|------|--------------|
+| `get_catalog_overview` | Summary of the catalog: connected tools, asset counts, tags, company context |
+| `resolve_asset_id` | Look up an asset by name — schema, columns, description |
+| `advanced_search` | Find assets by identifier, keyword, or semantic similarity |
+| `describe_asset` | Deep-dive on one asset: overview, columns, tests, tickets, Slack context |
+| `inspect_lineage_details` | Upstream and downstream lineage graph for an asset |
+| `calculate_downstream_impact` | Blast-radius analysis for a change |
+| `get_column_lineage` | Column-level lineage for a specific column |
+| `get_context_repo` | The semantic contract deployed to this token's Context Garage |
+| `list_knowledge_base_files` / `get_knowledge_base_file_content` | Browse and read your team's knowledge base |
+| `load_skill` | Load a Sidecar development guide into the agent's context |
+
+All tools are read-only — the server never modifies your catalog or warehouse.
+
+## Troubleshooting
+
+- **401 / authentication errors** — your token expired or the OAuth session lapsed. Re-run the login (OAuth) or create a fresh token.
+- **Search returns nothing** — call `get_catalog_overview` first to see what's actually in the catalog for your account; your user may not have access to the workspace you expect.
+- **OAuth login never opens or loops** — confirm the URL is exactly `https://service-mcp.sidecardata.com/sidecar/mcp` and that your client is up to date. Codex does not currently support OAuth with Sidecar — use a token instead.
+- Still stuck? Contact [support@sidecardata.com](mailto:support@sidecardata.com).
+
+<Note>
+  Sidecar is also listed in the official [MCP Registry](https://registry.modelcontextprotocol.io) as `com.sidecardata/sidecar`. Clients that browse the registry can install it from there.
+</Note>
