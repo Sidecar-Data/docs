@@ -33,6 +33,11 @@ agent session starts. You never enter, rotate, or refresh a token.
 Grant these roles to your existing Sidecar service account in **each project**
 agents should query. This is the only setup step.
 
+Use the service account from your [Sidecar BigQuery
+integration](/integrations/data-warehouses/bigquery) — its email is the
+`client_email` value in the key file you uploaded to Sidecar, and it is also
+listed in the Google Cloud console under **IAM &amp; Admin → Service Accounts**.
+
 | Role | Purpose |
 |---|---|
 | `roles/mcp.toolUser` | Allows MCP tool calls. Required for both servers. |
