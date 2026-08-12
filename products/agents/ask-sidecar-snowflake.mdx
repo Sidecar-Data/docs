@@ -85,22 +85,99 @@ Back in Sidecar, click **Verify MCP Server**. Sidecar connects to your warehouse
 
 Once verified, a green checkmark appears and the per-user token setup section becomes available for all users in your organization.
 
+### 5. Allow Sidecar through your network policy
+
+Snowflake requires users who authenticate with Programmatic Access Tokens to be
+subject to a network policy with at least one network rule by default. Sidecar
+sends Snowflake MCP requests from this production outbound IP address:
+
+```text
+44.236.246.98/32
+```
+
+First, identify the network policy that applies to each Snowflake user who will
+connect a PAT. A user-level policy overrides an account-level policy.
+
+```sql
+SHOW PARAMETERS LIKE 'NETWORK_POLICY' FOR USER <SNOWFLAKE_USER>;
+SHOW PARAMETERS LIKE 'NETWORK_POLICY' IN ACCOUNT;
+```
+
+If a policy applies, inspect whether it uses network rules or the legacy IP
+allowlist:
+
+```sql
+DESCRIBE NETWORK POLICY <POLICY_NAME>;
+```
+
+For a rule-based or new policy, create a network rule for Sidecar in the
+database selected in Step 2:
+
+```sql
+USE ROLE ACCOUNTADMIN;
+
+CREATE NETWORK RULE <DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS
+  MODE = INGRESS
+  TYPE = IPV4
+  VALUE_LIST = ('44.236.246.98/32')
+  COMMENT = 'Sidecar production outbound IP for Snowflake MCP';
+```
+
+Add the rule to an existing rule-based policy without replacing its other
+rules:
+
+```sql
+ALTER NETWORK POLICY <POLICY_NAME>
+  ADD ALLOWED_NETWORK_RULE_LIST =
+    ('<DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS');
+```
+
+If no rule-based policy applies, create one that includes both Sidecar and your
+normal corporate or VPN ingress rule, then attach it to the user:
+
+```sql
+CREATE NETWORK POLICY SIDECAR_ASK_NETWORK_POLICY
+  ALLOWED_NETWORK_RULE_LIST = (
+    '<DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS',
+    '<DATABASE>.<SCHEMA>.<CORPORATE_OR_VPN_INGRESS_RULE>'
+  );
+
+ALTER USER <SNOWFLAKE_USER>
+  SET NETWORK_POLICY = SIDECAR_ASK_NETWORK_POLICY;
+```
+
+<Warning>
+  A policy that allows only Sidecar's IP blocks the user from connecting
+  directly from other networks. Include every allowed and blocked rule required
+  by your organization for Snowsight and other Snowflake clients before
+  attaching the policy.
+</Warning>
+
+If `DESCRIBE NETWORK POLICY` shows `ALLOWED_IP_LIST` instead of
+`ALLOWED_NETWORK_RULE_LIST`, do not add the Sidecar rule to that legacy policy.
+Snowflake requires network rules for PAT access and recommends against mixing
+legacy IP lists with network rules. Create a rule-based user policy that
+reproduces every required allowed and blocked restriction, then add the Sidecar
+rule and attach the new policy. Coordinate this change with your Snowflake
+security administrator to avoid locking users out.
+
+Do not use **Bypass requirement for network policy** for ongoing Sidecar access.
+The bypass is temporary and does not bypass an existing network policy. See
+Snowflake's [programmatic access token guide](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens#network-policy-requirements)
+and [network policy guidance](https://docs.snowflake.com/en/user-guide/network-policies).
+
 ## Per-user setup
 
 Once the admin has created the MCP Server object, each user connects their own Snowflake PAT. This is what allows Ask Sidecar to run queries on your behalf, under your Snowflake identity.
 
-### 5. Generate a Programmatic Access Token (PAT)
+### 6. Generate a Programmatic Access Token (PAT)
 
 1. Log in to Snowflake and click your user icon in the bottom left.
 2. Navigate to **Settings** > **Authentication** > **Programmatic access tokens**.
 3. Click **Generate token**, select a validity period, then click **Generate**.
 4. Copy the token immediately. It is only shown once.
 
-<Note>
-  You may need to update your Snowflake network policy rules to allow connections from Sidecar's infrastructure.
-</Note>
-
-### 6. Connect the token in Sidecar
+### 7. Connect the token in Sidecar
 
 1. In the Sidecar app, go to **Integrations** > **Snowflake** > **Ask Sidecar** tab.
 2. Paste your PAT into the **Programmatic Access Token** field.
@@ -142,7 +219,12 @@ All queries are read-only. The MCP Server is provisioned with `read_only: true` 
 </Accordion>
 
 <Accordion title="PAT connection fails">
-  Make sure your token is a Programmatic Access Token (from Settings > Authentication > Programmatic access tokens), not an OAuth token or password. Check that your Snowflake network policy allows connections from Sidecar. If the token was copied incorrectly, generate a new one since PATs cannot be retrieved after creation.
+  Make sure your token is a Programmatic Access Token (from **Settings →
+  Authentication → Programmatic access tokens**), not an OAuth token or
+  password. Confirm that the effective network policy allows
+  `44.236.246.98/32` and that the authentication policy permits
+  `PROGRAMMATIC_ACCESS_TOKEN`. If the token was copied incorrectly, generate a
+  new one because PATs cannot be retrieved after creation.
 </Accordion>
 
 <Accordion title="Queries return no results or access errors">

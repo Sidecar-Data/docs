@@ -29,6 +29,82 @@ selected Sidecar database. It exposes one `executesql` tool with Snowflake's
 [CREATE MCP SERVER reference](https://docs.snowflake.com/en/sql-reference/sql/create-mcp-server)
 for the underlying object and tool specification.
 
+## Configure network access
+
+Snowflake requires service users who authenticate with Programmatic Access
+Tokens to be subject to a network policy with at least one network rule by
+default. Sidecar sends Snowflake MCP requests from this production outbound IP
+address:
+
+```text
+44.236.246.98/32
+```
+
+Check whether a user-level or account-level network policy applies to the
+service user. A user-level policy overrides an account-level policy.
+
+```sql
+SHOW PARAMETERS LIKE 'NETWORK_POLICY' FOR USER SIDECAR_USER;
+SHOW PARAMETERS LIKE 'NETWORK_POLICY' IN ACCOUNT;
+```
+
+If a policy applies, inspect whether it uses network rules or the legacy IP
+allowlist:
+
+```sql
+DESCRIBE NETWORK POLICY <POLICY_NAME>;
+```
+
+For a rule-based or new policy, create a network rule for Sidecar in the database
+that contains `SIDECARMCPSERVER`:
+
+```sql
+USE ROLE ACCOUNTADMIN;
+
+CREATE NETWORK RULE <DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS
+  MODE = INGRESS
+  TYPE = IPV4
+  VALUE_LIST = ('44.236.246.98/32')
+  COMMENT = 'Sidecar production outbound IP for Snowflake MCP';
+```
+
+<Note>
+  If you created `SIDECAR_MCP_INGRESS` during Ask Sidecar setup, reuse it and
+  skip the `CREATE NETWORK RULE` statement.
+</Note>
+
+Add the rule to an existing rule-based policy without replacing its other
+rules:
+
+```sql
+ALTER NETWORK POLICY <POLICY_NAME>
+  ADD ALLOWED_NETWORK_RULE_LIST =
+    ('<DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS');
+```
+
+If `DESCRIBE NETWORK POLICY` shows `ALLOWED_IP_LIST` instead of
+`ALLOWED_NETWORK_RULE_LIST`, do not add the Sidecar rule to that legacy policy.
+Snowflake requires network rules for PAT access and recommends against mixing
+legacy IP lists with network rules. Create a rule-based user policy that
+reproduces every restriction the service user needs, then add the Sidecar rule
+and attach the new policy.
+
+If no rule-based policy applies, create a dedicated policy and attach it to the
+service user:
+
+```sql
+CREATE NETWORK POLICY SIDECAR_AGENT_CONSOLE_NETWORK_POLICY
+  ALLOWED_NETWORK_RULE_LIST =
+    ('<DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS');
+
+ALTER USER SIDECAR_USER
+  SET NETWORK_POLICY = SIDECAR_AGENT_CONSOLE_NETWORK_POLICY;
+```
+
+If you use a different service user, replace `SIDECAR_USER` with its name. See
+Snowflake's [programmatic access token guide](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens#network-policy-requirements)
+and [network policy guidance](https://docs.snowflake.com/en/user-guide/network-policies).
+
 ## Create the organization PAT
 
 You can reuse the `SIDECAR_USER` service user from the [Snowflake integration
@@ -50,9 +126,10 @@ Copy the `token_secret` value from the result. Snowflake shows it only once.
 Change the expiration to comply with your authentication policy.
 
 Snowflake requires a role restriction for service-user PATs by default. Your
-network and authentication policies must also permit the token. See Snowflake's
+authentication policies must also allow `PROGRAMMATIC_ACCESS_TOKEN` as an
+authentication method. See Snowflake's
 [programmatic access token guide](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens)
-for policy requirements, token generation, and rotation.
+for authentication policy requirements, token generation, and rotation.
 
 ## Enable Snowflake MCP in Sidecar
 
@@ -86,8 +163,9 @@ Snowflake row and select **Replace token**.
 
 <Accordion title="The PAT is rejected">
   Confirm that the token belongs to a service user, its role restriction names a
-  role granted to that user, and the token has not expired. If Snowflake applies
-  a network policy, it must allow requests from Sidecar's infrastructure.
+  role granted to that user, and the token has not expired. Confirm that the
+  effective network policy allows `44.236.246.98/32` and that the authentication
+  policy permits `PROGRAMMATIC_ACCESS_TOKEN`.
 </Accordion>
 
 <Accordion title="Queries fail with access errors">
