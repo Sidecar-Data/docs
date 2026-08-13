@@ -21,18 +21,19 @@ You'll need to create a custom role and service account in GCP. This role and se
 
     | # | Permission | Reason |
     |---|-----------|--------|
-    | 1 | `bigquery.datasets.get` | Metadata Ingestion |
-    | 2 | `bigquery.tables.get` | Metadata Ingestion |
-    | 3 | `bigquery.tables.getData` | Metadata Ingestion |
-    | 4 | `bigquery.tables.list` | Metadata Ingestion |
-    | 5 | `resourcemanager.projects.get` | Metadata Ingestion |
-    | 6 | `bigquery.jobs.create` | Metadata Ingestion |
-    | 7 | `bigquery.jobs.listAll` | Metadata Ingestion |
-    | 8 | `bigquery.routines.get` | Stored Procedure |
-    | 9 | `bigquery.routines.list` | Stored Procedure |
-    | 10 | `bigquery.readsessions.create` | Usage & Lineage Workflow |
-    | 11 | `bigquery.readsessions.getData` | Usage & Lineage Workflow |
-    | 12 | `logging.operations.list` | Incremental Metadata Ingestion |
+    | 1 | `bigquery.datasets.create` | Sidecar dataset setup |
+    | 2 | `bigquery.datasets.get` | Metadata Ingestion |
+    | 3 | `bigquery.tables.get` | Metadata Ingestion |
+    | 4 | `bigquery.tables.getData` | Metadata Ingestion |
+    | 5 | `bigquery.tables.list` | Metadata Ingestion |
+    | 6 | `resourcemanager.projects.get` | Metadata Ingestion |
+    | 7 | `bigquery.jobs.create` | Metadata Ingestion |
+    | 8 | `bigquery.jobs.listAll` | Metadata Ingestion |
+    | 9 | `bigquery.routines.get` | Stored Procedure |
+    | 10 | `bigquery.routines.list` | Stored Procedure |
+    | 11 | `bigquery.readsessions.create` | Usage & Lineage Workflow |
+    | 12 | `bigquery.readsessions.getData` | Usage & Lineage Workflow |
+    | 13 | `logging.operations.list` | Incremental Metadata Ingestion |
 
     5. Click `Create` to create the role.
     6. Repeat the role creation process for each Project you want Sidecar to ingest metadata for.
