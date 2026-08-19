@@ -34,6 +34,7 @@ You'll need to create a custom role and service account in GCP. This role and se
     | 11 | `bigquery.readsessions.create` | Usage & Lineage Workflow |
     | 12 | `bigquery.readsessions.getData` | Usage & Lineage Workflow |
     | 13 | `logging.operations.list` | Incremental Metadata Ingestion |
+    | 14 | `mcp.tools.call` | Agent MCP tool calls (Agent Console jobs such as dbt Firefighter) |
 
     5. Click `Create` to create the role.
     6. Repeat the role creation process for each Project you want Sidecar to ingest metadata for.
@@ -78,6 +79,7 @@ You'll need to create a custom role and service account in GCP. This role and se
         "bigquery.readsessions.create",
         "bigquery.readsessions.getData",
         "logging.operations.list",
+        "mcp.tools.call",
     )
 
     PERMISSIONS_CSV=$(IFS=,; echo "${PERMISSIONS[*]}")
@@ -122,5 +124,6 @@ You'll need to create a custom role and service account in GCP. This role and se
 ## Add BigQuery MCP to Agent Console
 
 The warehouse connection above does not automatically provide query tools to
-agents. Follow [Set up BigQuery MCP](/integrations/mcp-servers/bigquery) to
-register a compatible remote MCP endpoint.
+agents. The `mcp.tools.call` permission in the custom role enables Google's
+managed MCP servers. Follow [Set up BigQuery
+MCP](/integrations/mcp-servers/bigquery) to confirm the connection.
