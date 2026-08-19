@@ -18,49 +18,25 @@ agent session starts. You never enter, rotate, or refresh a token.
 <Info>
   Google's managed servers use OAuth 2.0 bearer tokens checked against IAM.
   There is no interactive consent screen for a service account — the IAM
-  permissions you grant below are the authorization.
+  permissions on the service account are the authorization.
 </Info>
 
 ## Prerequisites
 
 - A connected [BigQuery integration](/integrations/data-warehouses/bigquery).
-  The Google MCP servers reuse its service account.
-- Permission to edit IAM roles in your Google Cloud projects (for example,
-  Project Owner or a role with `iam.roles.update`).
-
-## Grant the required IAM permission
-
-The custom role from your [Sidecar BigQuery
-integration](/integrations/data-warehouses/bigquery) already includes most of
-what the BigQuery MCP server needs (`bigquery.jobs.create`,
-`bigquery.tables.getData`, and the metadata read permissions). Add one
-permission to that custom role:
-
-| Permission | Purpose |
-|---|---|
-| `mcp.tools.call` | Allows MCP tool calls. |
-
-1. Navigate to **Roles** in the **IAM &amp; Admin** section.
-2. Open the Sidecar custom role you created (for example `Sidecar Data BigQuery`).
-3. Click **Edit Role**, add `mcp.tools.call`, and save.
-4. Repeat in **each project** where you created the custom role.
-
-Or with `gcloud`:
-
-```bash
-PROJECTS=("project-1-id" "project-2-id" "project-3-id")
-ROLE_ID="sidecarDataBigQuery"
-
-for PROJECT in "${PROJECTS[@]}"; do
-  gcloud iam roles update "$ROLE_ID" \
-    --project="$PROJECT" \
-    --add-permissions="mcp.tools.call"
-done
-```
+  The Google MCP servers reuse its service account and custom role, which
+  include every permission the BigQuery MCP server needs.
 
 No new APIs need to be enabled: the MCP interface is part of the BigQuery and
 Cloud Logging APIs, which your integration already uses. No new key or other
 credential is entered in Sidecar.
+
+<Note>
+  If you created the Sidecar custom role before `mcp.tools.call` was added to
+  the [BigQuery integration
+  instructions](/integrations/data-warehouses/bigquery), edit the role and add
+  that permission in each project.
+</Note>
 
 <Note>
   The Cloud Logging server needs log read access that the custom role does not
@@ -70,32 +46,6 @@ credential is entered in Sidecar.
 </Note>
 
 {/* TODO(pre-ship): confirm logging.viewer suffices; Google's setup doc names roles/logging.admin. Swap if the verification spike shows admin is enforced. */}
-
-### Alternative: predefined roles
-
-If you prefer predefined roles over editing the custom role, grant these to the
-Sidecar service account in **each project** agents should query. The service
-account email is the `client_email` value in the key file you uploaded to
-Sidecar, and it is also listed in the Google Cloud console under **IAM &amp;
-Admin → Service Accounts**.
-
-| Role | Purpose |
-|---|---|
-| `roles/mcp.toolUser` | Allows MCP tool calls. Required for both servers. |
-| `roles/bigquery.jobUser` | Runs query jobs. Often already granted for the Sidecar integration. |
-| `roles/bigquery.dataViewer` | Reads table data and metadata. Grant at the dataset level instead to limit which data agents can see. |
-| `roles/logging.viewer` | Reads logs through the Cloud Logging server. Omit if you do not use that server. |
-
-```bash
-PROJECT_ID="analytics-prod"
-SA_EMAIL="sidecar-data@analytics-prod.iam.gserviceaccount.com"
-
-for ROLE in roles/mcp.toolUser roles/bigquery.jobUser roles/bigquery.dataViewer roles/logging.viewer; do
-  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member="serviceAccount:$SA_EMAIL" \
-    --role="$ROLE"
-done
-```
 
 ## Confirm the connection
 
@@ -140,12 +90,12 @@ unauthenticated endpoint.
 </Accordion>
 
 <Accordion title="Queries are denied for a specific project">
-  The permissions above must be granted in every project agents query, not
+  The Sidecar custom role must be granted in every project agents query, not
   only the service account's home project. Check the project named in the
   error.
 </Accordion>
 
 <Accordion title="Agents see datasets they should not">
-  Replace the project-level `roles/bigquery.dataViewer` grant with
-  dataset-level grants covering only the datasets agents may read.
+  Limit the service account's read access with dataset-level access controls
+  that cover only the datasets agents may read.
 </Accordion>
