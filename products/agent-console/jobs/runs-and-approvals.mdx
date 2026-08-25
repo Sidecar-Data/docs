@@ -1,0 +1,83 @@
+---
+title: Runs and approvals
+description: "Follow Agent Console runs, approve gated tools, and review artifacts"
+icon: "list-check"
+---
+
+The **Console** lists runs across every agent and job. A job page also shows its recent runs.
+
+Click a run to review its origin, current status, turn timeline, transcript, approvals, and artifacts.
+
+<Frame caption="Filter the Console by agent or status, then open any run for details.">
+  <img
+    src="/images/agent-console/runs/console.png"
+    alt="Agent Console run list with agent and status filters and scheduled Builder runs"
+  />
+</Frame>
+
+## Run statuses
+
+| Status | Meaning |
+| --- | --- |
+| **Queued** | Sidecar accepted the run and is preparing it. |
+| **Running** | The agent is working. |
+| **Awaiting input** | The agent needs a reply before it can continue. |
+| **Awaiting approval** | A gateable tool is waiting for an Account Admin. |
+| **Blocked** | The run cannot continue without resolving a blocking condition. |
+| **Succeeded** | The run completed successfully. |
+| **Partial** | The run completed with an incomplete result or delivery. |
+| **Failed** | The run stopped with an error. |
+| **Cancelled** | An Account Admin stopped the run. |
+
+## Start and cancel runs
+
+An active manual or scheduled job has **Run now**. Starting it opens the run detail page.
+
+Sidecar serializes runs for the same job and target. If the same job is already running, use the existing run instead. Different jobs can run at the same time.
+
+Use **Cancel run** to stop an active run. Cancelling closes its pending approvals.
+
+## Transcript
+
+Expand a turn to see the agent messages and tool activity for that stage of the run. Older transcripts may become unavailable while run metadata and artifacts remain.
+
+<Frame caption="An expanded turn shows agent messages and each tool call in sequence.">
+  <img
+    src="/images/agent-console/runs/transcript.png"
+    alt="Expanded Builder run turn with a Snowflake MCP executesql tool call and agent response"
+  />
+</Frame>
+
+## Approvals
+
+Tool permissions determine whether gateable web and MCP tools pause. Core repository tools do not pause.
+
+When a run reaches **Awaiting approval**:
+
+1. Open the approval card.
+2. Review the tool, MCP server if applicable, and summarized inputs.
+3. Click **Approve**, or click **Reject with note** and explain what the agent should do instead.
+
+Only an Account Admin in the same workspace can decide. A decision is recorded with the approver and time.
+
+{/* TODO: Add a screenshot of an Awaiting approval run with Approve and Reject with note controls. Save it as `/images/agent-console/runs/pending-approval.png`. */}
+
+Slack approval controls use the same authorization. If Slack asks you to link your identity, complete the one-time link before deciding. Linking does not grant the Account Admin role or approve the action.
+
+## Artifacts
+
+A completed run can produce:
+
+- A pull or merge request
+- A pushed branch or compare link
+- A Markdown response in Agent Console
+- A source-control review for Custodian
+
+Open artifacts from the run detail page. Agents do not merge their own changes.
+
+<Frame caption="Artifacts keep the delivered source-control change and final response together.">
+  <img
+    src="/images/agent-console/run-artifacts.png"
+    alt="Succeeded Builder run with pull request and answer artifacts"
+  />
+</Frame>

@@ -1,0 +1,162 @@
+---
+title: Review upstream changes for downstream impact
+sidebarTitle: Custodian downstream-impact review
+description: "Configure a Custodian job that reviews upstream GitHub pull requests for downstream impact"
+icon: "shield-check"
+---
+
+In this recipe, you configure Custodian to review pull requests in one upstream GitHub repository for evidence-supported effects on one downstream repository.
+
+The job posts its findings as a source-control review. For this first setup, you use **Review only** so Custodian does not change downstream code.
+
+## Before you start
+
+You need:
+
+- An Account Admin role in Sidecar
+- Permission to install or configure GitHub apps for the relevant organizations
+- One upstream GitHub repository that receives changes
+- One different downstream GitHub repository that may depend on those changes
+- The standard Sidecar Data GitHub app connected to the downstream repository
+- The Custodian GitHub app installed with access to the upstream repository
+
+Both repositories must use `github.com`.
+
+## Configure the GitHub integrations
+
+<Steps>
+  <Step title="Connect the downstream repository">
+    In Sidecar, select **Integrations → GitHub**.
+
+    If the standard Sidecar Data GitHub app is not connected, click **Link Sidecar Data** and grant it access to the downstream repository.
+  </Step>
+
+  <Step title="Install Custodian for the upstream repository">
+    On the same GitHub integration page, find **Custodian** and click **Manage access in GitHub**.
+
+    Install or configure the Custodian GitHub app with access to the upstream repository. If GitHub shows an approval request, ask an organization administrator to approve it.
+
+    Return to Sidecar and confirm that the Custodian installation lists the upstream repository as accessible.
+
+    {/* TODO: Add a screenshot of Integrations → GitHub showing a healthy Custodian installation and the upstream repository. Save it as `/images/agent-console/recipes/custodian/github-access.png`. */}
+  </Step>
+</Steps>
+
+## Subscribe the upstream repository
+
+<Steps>
+  <Step title="Open Custodian settings">
+    Select **Agents → Custodian**, then click **Settings**.
+  </Step>
+
+  <Step title="Bind the upstream repository">
+    Under **Scope → Subscribed repositories**, find the upstream repository and click **Bind**.
+
+    You can use **Bind all accessible** when every accessible repository should be available as a Custodian upstream.
+
+    Confirm that the repository shows as bound and accessible.
+
+    {/* TODO: Add a screenshot of Subscribed repositories with the upstream repository bound. Save it as `/images/agent-console/recipes/custodian/bind-upstream.png`. */}
+  </Step>
+</Steps>
+
+## Duplicate the Custodian template
+
+<Steps>
+  <Step title="Open the preset catalog">
+    Return to the Custodian page and click **From preset**.
+  </Step>
+
+  <Step title="View the template">
+    Find **Review changes for downstream impacts** and click **View template**.
+
+    The template is read-only and never runs directly.
+  </Step>
+
+  <Step title="Create an operational copy">
+    Click **Duplicate**. Sidecar creates an inactive custom copy and opens its configuration page.
+
+    <Frame caption="Duplicate the immutable template to create a configurable Custodian job.">
+      <img
+        src="/images/agent-console/jobs/custodian-template.png"
+        alt="Immutable Custodian downstream-impact review template with Duplicate button"
+      />
+    </Frame>
+  </Step>
+</Steps>
+
+## Configure the review job
+
+<Steps>
+  <Step title="Name the job">
+    Use a name that identifies the repository relationship, such as `API changes → analytics impact review`.
+
+    Add a description that helps Account Admins recognize the job in the Console.
+  </Step>
+
+  <Step title="Review the instructions">
+    Keep the default instructions for the first job. Add only constraints specific to this upstream and downstream relationship.
+  </Step>
+
+  <Step title="Select upstream and downstream">
+    Under **Scope**, select:
+
+    - **Upstream repository** — the repository you bound to Custodian
+    - **Downstream repository** — the different repository connected through the standard Sidecar GitHub integration
+
+    Save the scope.
+
+    {/* TODO: Add a screenshot of Custodian Scope with one upstream and one downstream repository selected. Save it as `/images/agent-console/recipes/custodian/repository-pair.png`. */}
+  </Step>
+
+  <Step title="Choose review behavior">
+    Under **Review behavior**, select **Review only**.
+
+    Leave **Suppress no-findings comments** off for the first test. This lets you confirm that the workflow ran even when it finds no downstream impact.
+
+    After validating the workflow, you can choose **Draft PR when a safe fix is verified**.
+  </Step>
+
+  <Step title="Check readiness">
+    Confirm that the readiness panel marks the upstream and downstream repositories ready.
+
+    Knowledge Store and Context Garage checks are informational. They do not block activation.
+
+    {/* TODO: Add a screenshot of a ready Custodian job showing the readiness panel and fixed configuration. Save it as `/images/agent-console/recipes/custodian/readiness.png`. */}
+  </Step>
+
+  <Step title="Activate the job">
+    Switch the job to **Active**.
+
+    Sidecar allows only one active Custodian downstream-impact job for a given upstream repository. If activation fails, pause the existing job or choose another upstream.
+  </Step>
+</Steps>
+
+## Test the workflow
+
+<Steps>
+  <Step title="Open or update an upstream pull request">
+    Create a safe test pull request in the upstream repository, or push a new commit to an existing test pull request.
+
+    Custodian starts from the GitHub pull-request webhook. This job does not have **Run now**.
+  </Step>
+
+  <Step title="Follow the run">
+    Open **Agents → Console** and select the Custodian run. Review the evidence, findings, and delivery status.
+  </Step>
+
+  <Step title="Review the GitHub result">
+    Return to the upstream pull request and find the Custodian review comment.
+
+    With **Review only**, Custodian does not change downstream code. If you later enable draft remediation, review any downstream draft pull request before merging.
+
+    {/* TODO: Add a screenshot of an upstream GitHub pull request with a Custodian downstream-impact review. Save it as `/images/agent-console/recipes/custodian/github-review.png`. */}
+  </Step>
+</Steps>
+
+## Maintain the job
+
+- Pause the job before changing a repository binding.
+- Restore GitHub app access if readiness reports an inaccessible repository.
+- Use **Retry** when the same pull-request snapshot should run again.
+- Use **Run again** when the upstream head or downstream base branch has moved.

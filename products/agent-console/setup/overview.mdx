@@ -1,0 +1,46 @@
+---
+title: Set up Agent Console
+description: "Prepare repositories, dbt context, MCP tools, knowledge, and agent defaults"
+icon: "sliders"
+---
+
+Agent Console setup spans several parts of Sidecar. Complete only the connections required by the agents and jobs you plan to use.
+
+## Setup checklist
+
+<CardGroup cols={2}>
+  <Card title="Connect repositories" icon="git-branch" href="/products/agent-console/setup/connect-repositories">
+    Give agents access to GitHub or GitLab repositories.
+  </Card>
+  <Card title="Connect dbt context" icon="diagram-project" href="/products/agent-console/setup/connect-dbt">
+    Sync dbt metadata independently from repository access.
+  </Card>
+  <Card title="Connect MCP servers" icon="plug" href="/integrations/mcp-servers/connect-an-mcp-server">
+    Register external tools at the workspace level.
+  </Card>
+  <Card title="Give agents MCP access" icon="key" href="/products/agent-console/setup/give-agents-mcp-access">
+    Grant a registered server to an agent and its jobs.
+  </Card>
+  <Card title="Provide knowledge" icon="book-open" href="/products/agent-console/setup/provide-knowledge">
+    Add company context and playbooks to the Knowledge Store.
+  </Card>
+  <Card title="Configure agent defaults" icon="settings" href="/products/agent-console/setup/configure-agent-defaults">
+    Set delivery and tool permissions for Slack runs.
+  </Card>
+</CardGroup>
+
+## Resource requirements by agent
+
+| Agent | Repositories | Warehouse MCP | Special setup |
+| --- | --- | --- | --- |
+| Builder | Required | Optional | None |
+| Reliability | Optional | Optional | Monitor preset is event driven |
+| Optimization | Depends on the job | Required for expensive query review | dbt integration for project-health evidence |
+| Custodian | Required | Optional | Custodian GitHub app and repository binding |
+
+Sidecar shows readiness on each job. A required resource blocks the job until you connect it. An optional resource can improve the result without blocking the run.
+
+<Info>
+  You must be an Account Admin to manage Agent Console integrations and
+  settings.
+</Info>

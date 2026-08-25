@@ -9,11 +9,14 @@ icon: "bolt"
 Before starting, make sure you have:
 
 - Access to a **Databricks workspace**
-- Permission to use a **SQL Warehouse**
+- A workspace admin who can create or assign a service principal
+- Permission to grant **Can use** on a **SQL warehouse**
 - Access to **Unity Catalog** resources (catalogs, schemas, tables) that you want Sidecar to discover
-- **Unity Catalog admin access** (or help from someone who has it) to grant privileges to the Sidecar service principal
+- A catalog owner, metastore admin, or another principal that can grant Unity Catalog privileges
+- An account admin or metastore admin if the required `system` schemas are not enabled
+- **Can manage** access to each AI/BI dashboard that you want Sidecar to discover
 
-## 1. Get the Host and HTTP Path
+## 1. Get the host and HTTP path
 
 1. Log in to your **Databricks workspace**.
 2. Navigate to **SQL Warehouses**.
@@ -32,12 +35,12 @@ dbc-xxxxxxxx.cloud.databricks.com
 /sql/1.0/warehouses/xxxxxxxxxxxx
 ```
 
-## 2. Create a Service Principal and OAuth Secret
+## 2. Create a service principal and OAuth secret
 
 1. Click your username in the top bar and select **Settings**.
 2. Click the **Identity and access** tab.
 3. Next to **Service principals**, click **Manage**.
-4. Create a new service principal for Sidecar.
+4. Create a new service principal for Sidecar. Creating it from the workspace assigns it to that workspace.
 5. Click the created service principal, then click the **Secrets** tab.
 6. Click **Generate secret**.
 7. Set the secret's lifetime in days (maximum 730 days).
@@ -48,28 +51,89 @@ dbc-xxxxxxxx.cloud.databricks.com
   The secret is shown only once. The client ID is the same as the service principal's application ID.
 </Warning>
 
+<Note>
+  Use this one OAuth service principal for Sidecar's SQL and workspace API access. Do not create a personal access token (PAT) for this integration. If you reuse an account-level service principal, assign it to this workspace before continuing.
+</Note>
+
 ## 3. Grant permissions
 
 Grant your Sidecar **service principal** (the OAuth identity from step 2) the following before you test or save the integration in Sidecar.
 
-- **SQL warehouse**: In **SQL Warehouses** → your warehouse → **Permissions**, add the service principal with **Can use**.
+In the SQL commands below, replace `<principal>` with the service principal's application ID, which is the **Client ID** you copied in step 2. Keep the surrounding backticks.
 
-- **Data you want Sidecar to scan**: For each Unity Catalog Sidecar should discover besides **`system`**, rerun the **next section’s three `GRANT` statements**, replacing `system` with that catalog’s name and `<principal>` with your Sidecar service principal (usually a catalog owner or metastore admin runs them). If catalog-wide **SELECT** is not allowed, grant **USE SCHEMA** and **SELECT** only on the schemas and objects Sidecar needs.
+### Grant SQL warehouse access
 
-- **`system` catalog**: Sidecar reads tables in the **`system`** catalog for **query history**, **lineage**, and **billing**. Grant catalog-wide access on **`system`** so the principal can use all schemas and **SELECT** from all tables and views there. In a workspace SQL editor, run—replace `<principal>` with your Sidecar service principal’s Unity Catalog identity:
+In **Settings** → **Identity and access** → **Service principals** → **Manage**, open the Sidecar service principal and confirm that the **Databricks SQL access** entitlement is enabled.
+
+In **SQL Warehouses** → your warehouse → **Permissions**, add the service principal with **Can use**.
+
+### Grant access to catalogs Sidecar should scan
+
+For each Unity Catalog catalog Sidecar should discover besides `system`, run the following commands. Replace `<catalog>` and `<principal>`.
 
 ```sql
--- Allow the principal to see the catalog
-GRANT USE CATALOG ON CATALOG system TO `<principal>`;
-
--- Allow the principal to see all schemas within the catalog
-GRANT USE SCHEMA ON CATALOG system TO `<principal>`;
-
--- Allow the principal to select from all tables/views in the catalog
-GRANT SELECT ON CATALOG system TO `<principal>`;
+GRANT USE CATALOG ON CATALOG `<catalog>` TO `<principal>`;
+GRANT USE SCHEMA ON CATALOG `<catalog>` TO `<principal>`;
+GRANT SELECT ON CATALOG `<catalog>` TO `<principal>`;
 ```
 
-## 4. Configure the Integration
+These catalog-level grants let Sidecar discover and describe all current and future schemas, tables, and views in that catalog. To grant narrower access, grant `USE CATALOG` on the catalog and grant `USE SCHEMA` and `SELECT` only on the schemas or objects Sidecar should scan.
+
+### Grant access to required system tables
+
+Sidecar reads the following system data:
+
+- `system.information_schema` for catalogs, schemas, tables, views, and columns
+- `system.access.table_lineage` and `system.access.column_lineage` for lineage
+- `system.query.history` for query activity
+- `system.billing.usage` and `system.billing.list_prices` for compute costs
+
+In **Catalog Explorer**, confirm that the `access`, `query`, and `billing` schemas exist under the `system` catalog. If one is missing, ask an account admin or metastore admin to [enable that system schema](https://docs.databricks.com/aws/en/admin/system-tables/).
+
+Then run the following commands. Replace `<principal>`.
+
+```sql
+GRANT USE CATALOG ON CATALOG system TO `<principal>`;
+
+GRANT USE SCHEMA ON SCHEMA system.information_schema TO `<principal>`;
+
+GRANT USE SCHEMA ON SCHEMA system.access TO `<principal>`;
+GRANT SELECT ON TABLE system.access.table_lineage TO `<principal>`;
+GRANT SELECT ON TABLE system.access.column_lineage TO `<principal>`;
+
+GRANT USE SCHEMA ON SCHEMA system.query TO `<principal>`;
+GRANT SELECT ON TABLE system.query.history TO `<principal>`;
+
+GRANT USE SCHEMA ON SCHEMA system.billing TO `<principal>`;
+GRANT SELECT ON TABLE system.billing.usage TO `<principal>`;
+GRANT SELECT ON TABLE system.billing.list_prices TO `<principal>`;
+```
+
+### Create Sidecar's write namespace
+
+Sidecar stores derived metadata in the dedicated `sidecar.default` namespace. Ask a metastore admin or a principal with `CREATE CATALOG` on the metastore to run the following commands before you save the integration. If the `sidecar` catalog already exists, its owner can create the schema and grant access. Replace `<principal>`.
+
+```sql
+CREATE CATALOG IF NOT EXISTS sidecar;
+CREATE SCHEMA IF NOT EXISTS sidecar.default;
+
+GRANT USE CATALOG ON CATALOG sidecar TO `<principal>`;
+GRANT USE SCHEMA, CREATE TABLE ON SCHEMA sidecar.default TO `<principal>`;
+```
+
+Sidecar owns the tables and views that it creates in this schema. Do not use this schema for customer-managed objects.
+
+### Share AI/BI dashboards with Sidecar
+
+For each AI/BI dashboard that Sidecar should discover:
+
+1. Open the dashboard and click **Share**.
+2. Add the Sidecar service principal.
+3. Grant **Can view**.
+
+Only dashboards visible to the service principal can appear in Sidecar.
+
+## 4. Configure the integration
 
 Enter the following information in the Sidecar integration setup page:
 
@@ -85,11 +149,23 @@ After entering the credentials:
 1. Click **Test Connection**.
 2. Click **Save** to finish the integration.
 
+<Warning>
+  **Test Connection** currently verifies OAuth access to the SQL warehouse only. It does not verify system-table grants, the Sidecar write namespace, or AI/BI dashboard access. Complete every applicable grant above before you save the integration.
+</Warning>
+
 ## Result
 
 After the integration is complete, Sidecar will be able to:
 
 - Connect to your **Databricks SQL Warehouse**
 - Discover **catalogs, schemas, and tables**
+- Discover shared **AI/BI dashboards**
 - Query metadata from **Unity Catalog**
-- Use **`system`** catalog data for **query history**, **lineage**, and **billing** when those grants are in place
+- Use `system` catalog data for **query history**, **lineage**, and **billing**
+- Store derived metadata in `sidecar.default`
+
+## Add Databricks MCP to Agent Console
+
+The warehouse connection above does not automatically provide Databricks tools
+to agents. Follow [Set up Databricks MCP](/integrations/mcp-servers/databricks)
+to register a managed MCP server.

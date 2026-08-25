@@ -1,0 +1,28 @@
+---
+title: Choose an agent
+description: "Compare the live Agent Console agents and choose the right one for your task"
+icon: "users"
+---
+
+Choose an agent based on the outcome you need. Each agent has its own instructions, skills, resource requirements, and presets.
+
+| Agent | Use it for | Typical output | Important setup |
+| --- | --- | --- | --- |
+| [Builder](/products/agent-console/agents/builder) | Implementing scoped engineering changes | Pull request, branch, or text response | A source-control repository |
+| [Reliability](/products/agent-console/agents/reliability) | Investigating failures, tests, freshness issues, and incidents | Diagnosis and, when safe, a draft pull request | Repository and warehouse MCP are optional |
+| [Optimization](/products/agent-console/agents/optimization) | Warehouse cost, query performance, and dbt project health | Evidence-based report or draft pull request | Some workflows require a warehouse MCP |
+| [Custodian](/products/agent-console/agents/custodian) | Reviewing upstream pull requests for downstream impact | Source-control review and optional downstream remediation | Custodian GitHub access plus an upstream/downstream repository pair |
+| Concierge | General request routing and guidance | Coming soon | Not yet available |
+
+<Tip>
+  If you send a direct message to the Sidecar Slack app, Sidecar chooses among
+  the available agents. It uses Builder when it cannot classify the request
+  confidently.
+</Tip>
+
+<Frame caption="Builder, Reliability, Optimization, and Custodian are available. Concierge is coming soon.">
+  <img
+    src="/images/agent-console/overview/agent-console-navigation.png"
+    alt="Agent Console tabs with four available agents and Concierge marked coming soon"
+  />
+</Frame>

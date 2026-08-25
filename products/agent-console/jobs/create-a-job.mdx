@@ -1,0 +1,102 @@
+---
+title: Create a job
+description: "Create an Agent Console job from scratch, a preset, or a template"
+icon: "circle-plus"
+---
+
+Open an agent to create a custom job or use one of its released presets. Available options depend on the agent.
+
+| Starting point | Use it when | What you can change |
+| --- | --- | --- |
+| Custom job | You need your own instructions, scope, output, and manual or scheduled trigger | All standard job settings |
+| Preset | Sidecar provides a supported recurring or event-driven workflow | Active state, MCP servers, tool permissions, and notifications |
+| Template | The workflow needs specialized configuration, such as Custodian | Duplicate the read-only template, then configure the copy |
+
+## Create a custom job
+
+1. In Sidecar, select **Agents**.
+2. Open the agent that should perform the work.
+3. Click **New job**.
+4. Complete the form.
+
+<Frame caption="Start with a custom job when you need your own instructions and scope.">
+  <img
+    src="/images/agent-console/jobs/new-job-dialog.png"
+    alt="Empty New job dialog with name, description, instructions, repositories, and delivery fields"
+  />
+</Frame>
+
+### Name and description
+
+Use a name that describes a repeatable outcome. The optional description appears in the job list.
+
+### Instructions
+
+Describe what the agent should do on every run. State the target, expected result, validation, and important boundaries.
+
+### Repositories
+
+Select one or more repositories, or leave the selection empty to use all currently accessible repositories. Learn how the scope changes over time in [Configure a job](/products/agent-console/jobs/configure-a-job#repository-scope).
+
+### Delivery
+
+Available options depend on the agent's repository requirements:
+
+- **Open a pull request**
+- **Push to a branch**
+- **Text response in Agent Console**
+
+### Trigger
+
+Choose:
+
+- **Manual** — the job runs only when an Account Admin clicks **Run now**.
+- **Scheduled** — the job runs on an interval, at specific hours, or from a cron expression. **Run now** remains available.
+
+Custom jobs cannot select webhook, monitor, or chat triggers. Sidecar owns those trigger types for specialized workflows.
+
+Click **Create job** to open its configuration page.
+
+<Note>
+  MCP servers and tool permissions are not part of the New job dialog. Configure
+  them after Sidecar creates the job.
+</Note>
+
+## From a preset
+
+Agents with released presets show **From preset** beside **New job**.
+
+1. Click **From preset**.
+2. Review the preset's resources, trigger, and starting state.
+3. Add the preset.
+4. Open the installed job and review its readiness, MCP selection, tool permissions, and active state.
+
+<Frame caption="The preset catalog distinguishes installed workflows from presets you can add.">
+  <img
+    src="/images/agent-console/agents/optimization-presets.png"
+    alt="Optimization preset dialog with Expensive query review installed and dbt project health available"
+  />
+</Frame>
+
+Sidecar owns the preset's name, description, instructions, repository contract, delivery, and trigger. Updating a released preset can update those product-owned fields.
+
+Deleting a preset job does not remove it from the catalog. You can restore it as a fresh job later.
+
+## From a template
+
+A template is a read-only definition that never runs directly.
+
+1. Click **From preset**.
+2. Click **View template**.
+3. Review the fixed workflow.
+4. Click **Duplicate**.
+5. Configure and activate the new copy.
+
+Custodian uses this flow. Follow the [Custodian downstream-impact review recipe](/products/agent-console/recipes/custodian-downstream-impact-review) for its additional GitHub and repository requirements.
+
+<Frame caption="The Custodian template is read-only until you duplicate it.">
+  <img
+    src="/images/agent-console/jobs/custodian-template.png"
+    alt="Immutable Custodian downstream-impact review template with Duplicate button"
+  />
+</Frame>

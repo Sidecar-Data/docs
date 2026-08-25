@@ -1,0 +1,49 @@
+---
+title: Configure agent defaults
+description: "Set the scope and run defaults used by Agent Console Slack requests"
+icon: "settings"
+---
+
+Each agent has default settings for runs that do not use a job. Today, these defaults apply to requests sent by direct message to the Sidecar Slack app.
+
+Job settings are independent. Changing an agent default does not update existing jobs or active runs.
+
+## Open agent settings
+
+1. In Sidecar, select **Agents**.
+2. Open an agent.
+3. Click **Settings**.
+
+Changes on this page save automatically and affect future runs.
+
+<Frame caption="Agent settings combine resource scope with defaults for ad hoc runs.">
+  <img
+    src="/images/agent-console/setup/agent-defaults.png"
+    alt="Builder settings with repository scope, connected Snowflake tool, and run defaults"
+  />
+</Frame>
+
+## Scope
+
+The **Scope** section shows:
+
+- **Repositories** available from the connected source-control provider
+- **Connected tools** granted from the workspace MCP registry
+- **Subscribed repositories** for Custodian only
+
+Use [Give agents MCP access](/products/agent-console/setup/give-agents-mcp-access) to manage connected tools.
+
+## Run defaults
+
+### Delivery
+
+Delivery options depend on the agent's resource requirements. They can include a pull request, branch, or text response.
+
+### Tool permissions
+
+- **Autonomous** runs gateable tools without approval unless you add an exception.
+- **Supervised** pauses gateable tools for Account Admin approval unless you add an exception.
+
+Exceptions can include web tools and whole MCP servers. Core repository tools do not pause.
+
+These settings apply to [Slack runs](/products/agent-console/run-an-agent-from-slack). A saved job uses its own delivery, MCP selection, and tool permissions.

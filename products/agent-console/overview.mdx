@@ -1,209 +1,70 @@
 ---
 title: Agent Console
-description: "Run Sidecar's autonomous agents against your repositories, follow every run, and approve changes before they ship"
+sidebarTitle: Overview
+description: "Configure Sidecar agents, create repeatable jobs, and review their runs"
 icon: "terminal"
 ---
 
-The Agent Console is where you configure Sidecar's autonomous agents, run them against your repositories, and review everything they do. Agents work inside the repositories your source-control integration grants them, record every step they take, and always leave review and merge decisions with your team.
+The Agent Console is where you configure Sidecar agents, create jobs, and review their work. Open **Agents** in Sidecar to get started.
 
-To open it, go to **Agents** in the main navigation. The console shows a tab strip with the **Console** run feed and one tab per agent. **Builder** is available today; Reliability, Optimization, Custodian, and Concierge are coming soon.
+Builder, Reliability, Optimization, and Custodian are available. Concierge appears as coming soon.
 
-<Frame caption="The Console lists every run across all agents and jobs, newest first.">
+<Info>
+  You must be an Account Admin to open the Agent Console, manage its settings,
+  or approve a gated tool action.
+</Info>
+
+<Frame caption="The Console lists runs across every live agent. Concierge is coming soon.">
   <img
-    src="/images/agent-console/console-all-runs.png"
-    alt="Agent Console with last run per agent cards and the All runs table with agent and status filters"
+    src="/images/agent-console/overview/agent-console-navigation.png"
+    alt="Agent Console with Console, Builder, Reliability, Optimization, and Custodian available and Concierge marked coming soon"
   />
 </Frame>
 
-## Before you start
+## How the Agent Console is organized
 
-You need:
+### Agents
 
-- A Sidecar workspace with the Agent Console enabled
-- The Sidecar GitHub App installed (or GitLab connected) with access to the repositories agents should work on
-- A logged-in Sidecar user in that workspace
+Each agent has a specific role. For example, Builder handles engineering work while Reliability investigates data incidents. Start with [Choose an agent](/products/agent-console/agents/choose-an-agent) to compare them.
 
-<Note>
-  If you don't see **Agents** in your navigation, or the Builder tab shows no
-  repositories, contact [support@sidecardata.com](mailto:support@sidecardata.com)
-  to get the Agent Console enabled for your workspace.
-</Note>
+An agent's **Settings** page controls its connected MCP servers and the defaults used for Slack runs.
 
-## Key concepts
+### Jobs
 
-### Agent
+A job is saved work for one agent. It contains instructions, repository scope, output settings, a trigger, MCP access, and tool permissions.
 
-An agent is an autonomous worker with a specific role on your data platform. Each agent has its own page showing the repositories it can access, the jobs configured for it, and its recent runs.
+You can create a custom job, install a preset, or duplicate a template. The options depend on the agent. See [Create a job](/products/agent-console/jobs/create-a-job).
 
-An agent's repository access comes directly from your source-control integration: every repository the installed GitHub or GitLab app can reach. Granting or revoking repositories on the source-control side updates the agent's scope automatically — no reconfiguration needed in Sidecar.
+### Runs
 
-### Job
+A run is one execution of a job or Slack request. The **Console** lists runs across every agent. Open a run to review its progress, transcript, approvals, and artifacts.
 
-A job is a saved, reusable unit of work for one agent: a name, instructions, a repository scope, and settings for delivery and approval. You create jobs once and run them whenever needed. Jobs run on demand today; scheduled and event-based triggers are planned.
+### Resources and tools
 
-### Run
+Agents can use several types of context. Each type has its own setup path:
 
-A run is one end-to-end execution of a job. Every run appears in the Console with a status, and has a detail page with the full timeline of what the agent did.
+| Resource | What it provides | Where you configure it |
+| --- | --- | --- |
+| Source control | Repository contents and a destination for branches or pull requests | **Integrations**, then the job's repository scope |
+| dbt | Project metadata, tests, and lineage | **Integrations** |
+| MCP servers | External tools such as warehouse query access | **Integrations → MCP Servers**, then agent and job settings |
+| Knowledge Store | Company context, policies, and playbooks | **Context → Knowledge Store** |
 
-| Status | Meaning |
-| --- | --- |
-| **Queued** | The run is accepted and waiting to start. |
-| **Running** | The agent is actively working. |
-| **Awaiting approval** | The run is paused until a human approves or rejects a gated action. |
-| **Succeeded** | The run finished and its deliverables are captured as artifacts. |
-| **Failed** | The run stopped with an error, shown on the run detail page. |
-| **Cancelled** | A user stopped the run. |
+Use the [Agent Console setup guide](/products/agent-console/setup/overview) to prepare these resources.
 
-### Approval
-
-An approval is a human decision point. When a job requires approval, the run pauses before the agent takes a gated action — such as opening a pull request — and waits for someone on your team to approve or reject it.
-
-### Artifact
-
-An artifact is something a run produced: a pull request, a pushed branch, or a written answer. Artifacts are listed on the run detail page with links to the result.
-
-## The Console
-
-The Console is the home page of the Agent Console and lists every run in your workspace.
-
-- **Last run per agent** cards show each agent's most recent run and status. Click a card to open that run.
-- The **All runs** table lists runs newest first with columns for Status, Run, Job · Agent, Trigger, Started, and Duration.
-- Use the search box to filter the current page by run id, job, or agent, and the **Agent** and **Status** chips to narrow the table.
-- Click any row to open the run detail page.
-
-Runs, jobs, and approvals are visible only to users in your workspace.
-
-## Create and configure jobs
-
-Open an agent's tab (for example **Builder**) to see its jobs. Click **New job** to create one:
-
-- **Name** — how the job appears in tables and run history.
-- **Description** — an optional short blurb shown in the jobs table.
-- **Instructions** — what the agent should do on each run. Instructions on jobs you create are always editable later.
-- **Repositories** — leave empty to run against all repositories the agent can access (the default), or select a subset.
-- **Delivery** — how the agent's changes are delivered (see below).
-
-<Frame caption="Each job has its own configuration page with instructions, scope, delivery, and approval settings.">
-  <img
-    src="/images/agent-console/job-config.png"
-    alt="Job configuration page with the Run now button, instructions editor, repository scope, and trigger settings"
-  />
-</Frame>
-
-Each job's configuration page lets you adjust:
-
-### Scope
-
-The repositories this job runs against. By default a job uses all of the agent's repositories, resolved fresh on each run — so newly granted repositories are picked up automatically. Click **Edit scope** to narrow the job to a specific subset, or switch **All repositories** back on to restore the default.
-
-### Delivery
-
-On the **Completion and output** card, choose how changes leave the agent:
-
-- **Open a pull request** (default) — the agent pushes a branch and Sidecar opens a pull request from it, ready for review.
-- **Push to a branch** — Sidecar pushes the branch and records a compare link, but opens no pull request. Choose this if pull requests trigger CI you want to control.
-
-Either way, agent branches are always prefixed `sidecar/` and merging remains a human decision.
-
-### Approval policy
-
-The **Require approval** toggle controls whether runs pause for a human decision before gated actions such as opening a pull request. When approval is not required, gated actions are approved automatically — and an auto-approved record is still kept on the run for audit.
-
-### Active toggle
-
-Pause a job by switching it off. Paused jobs can't be run (**Run now** is disabled and refused), but runs already in progress are unaffected. Switch the toggle back on to resume.
-
-### Notifications
-
-Where results for this job are delivered. Notification routing is rolling out — leave the default configuration unless your Sidecar contact provides one.
-
-### Deleting a job
-
-Click **Delete** on the job's configuration page and confirm. The job disappears from the agent's job list, but its historical runs remain in the Console — still labeled with the job's name — so your audit trail stays intact.
-
-## Run a job
-
-Click **Run now** on a job (from the agent's jobs table or the job's configuration page). The run starts as **Queued**, moves to **Running**, and you land on its detail page to watch progress.
-
-A few rules:
-
-- Only active jobs can run.
-- One run per job at a time — starting a duplicate returns a link to the already-active run. Different jobs run in parallel.
-- Running a job requires at least one accessible repository in its resolved scope. If your source-control integration isn't connected, you'll get a clear error with a link to fix it.
-
-## The run detail page
-
-Every run has a detail page showing exactly what happened.
-
-<Frame caption="The run detail page shows status, timing, turns, approvals, and artifacts for one run.">
-  <img
-    src="/images/agent-console/run-detail.png"
-    alt="Run detail page with status pill, run metadata, turn timeline, and artifacts"
-  />
-</Frame>
-
-### Header
-
-The run's status, trigger, requester, start time, and duration. Active runs show a **Cancel run** button — cancelling stops the agent and marks the run **Cancelled**. Failed runs show the error message at the top of the page.
-
-### Turns and transcript
-
-A run is made of turns — one round of agent work each. Expand a turn to load its transcript: the instructions the agent received, its messages, and every tool call with inputs, results, durations, and token usage.
-
-<Frame caption="Expand a turn to see the full transcript of agent messages and tool calls.">
-  <img
-    src="/images/agent-console/turn-transcript.png"
-    alt="Expanded turn transcript with agent messages and tool call entries showing durations and token usage"
-  />
-</Frame>
-
-Transcripts are fetched on demand, so a turn takes a moment to load when first expanded. Transcripts for very old runs may no longer be available; the run's status, turns, and artifacts are always retained.
-
-### Approvals
-
-If the run pauses for approval, an **Approval** panel appears with the action the agent wants to take — for example `Create pull request` — and its key inputs (repository, branch, title).
-
-{/* SCREENSHOT PLACEHOLDER: Run detail in Awaiting approval status with the pending approval card showing the tool name, input summary cards, and the Approve / Reject with note buttons. Save as /images/agent-console/approval-pending.png */}
-
-<Frame caption="A pending approval pauses the run until someone on your team decides.">
-  <img
-    src="/images/agent-console/approval-pending.png"
-    alt="Pending approval card showing the create pull request action with repository and branch inputs and Approve and Reject buttons"
-  />
-</Frame>
-
-- **Approve** — the run resumes and the agent performs the action.
-- **Reject with note** — enter a note (required) explaining what to do instead. The agent receives your note, adjusts course without performing the rejected action, and finishes the run — for example, summarizing a proposed change instead of opening the pull request.
-
-Every decision records who decided and when. Cancelling a run closes its pending approvals.
-
-### Artifacts
-
-What the run produced:
-
-- **Pull request** — a link to the pull request Sidecar opened.
-- **Branch** — the pushed branch with a compare link you can open a pull request from.
-- **Answer** — the agent's written answer, for runs that analyze rather than change code.
-
-<Frame caption="Artifacts link to everything a run delivered.">
-  <img
-    src="/images/agent-console/run-artifacts.png"
-    alt="Artifacts section listing a pull request artifact with its branch and an answer artifact summarizing the run"
-  />
-</Frame>
-
-### Scope & input
-
-The repositories the run could reach and the exact instructions it was given, so you can always reconstruct what was asked.
-
-## Next steps
+## Start here
 
 <CardGroup cols={2}>
-  <Card title="Builder agent" icon="hammer" href="/products/agent-console/builder">
-    Meet Builder — the engineering agent that turns well-scoped tasks into
-    reviewed pull requests.
+  <Card title="Create your first job" icon="rocket" href="/products/agent-console/quickstart">
+    Follow a complete Builder example from setup through the first run.
   </Card>
-  <Card title="Contact us" icon="envelope" href="mailto:support@sidecardata.com">
-    Questions about enabling the Agent Console for your workspace? We can help.
+  <Card title="Choose an agent" icon="users" href="/products/agent-console/agents/choose-an-agent">
+    Compare each live agent and its intended work.
+  </Card>
+  <Card title="Set up Agent Console" icon="sliders" href="/products/agent-console/setup/overview">
+    Connect repositories, dbt, MCP servers, and knowledge.
+  </Card>
+  <Card title="Run an agent from Slack" icon="slack" href="/products/agent-console/run-an-agent-from-slack">
+    Send an ad hoc request by direct message.
   </Card>
 </CardGroup>

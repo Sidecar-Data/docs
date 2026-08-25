@@ -1,0 +1,101 @@
+---
+title: BigQuery MCP
+description: "Use Google's managed BigQuery and Cloud Logging MCP servers with Sidecar agents"
+icon: "google"
+---
+
+Sidecar connects agents to Google's managed MCP servers natively. When your
+workspace has a [BigQuery integration](/integrations/data-warehouses/bigquery),
+two servers appear automatically in **Integrations → MCP Servers**:
+
+- **BigQuery** — Google's managed server at `https://bigquery.googleapis.com/mcp`
+- **Cloud Logging** — Google's managed server at `https://logging.googleapis.com/mcp`
+
+Sidecar authenticates to these servers with your existing BigQuery service
+account. It mints a short-lived Google access token automatically each time an
+agent session starts. You never enter, rotate, or refresh a token.
+
+<Info>
+  Google's managed servers use OAuth 2.0 bearer tokens checked against IAM.
+  There is no interactive consent screen for a service account — the IAM
+  permissions on the service account are the authorization.
+</Info>
+
+## Prerequisites
+
+- A connected [BigQuery integration](/integrations/data-warehouses/bigquery).
+  The Google MCP servers reuse its service account and custom role, which
+  include every permission the BigQuery MCP server needs.
+
+No new APIs need to be enabled: the MCP interface is part of the BigQuery and
+Cloud Logging APIs, which your integration already uses. No new key or other
+credential is entered in Sidecar.
+
+<Note>
+  If you created the Sidecar custom role before `mcp.tools.call` was added to
+  the [BigQuery integration
+  instructions](/integrations/data-warehouses/bigquery), edit the role and add
+  that permission in each project.
+</Note>
+
+<Note>
+  The Cloud Logging server needs log read access that the custom role does not
+  include. If you use that server, also grant `roles/logging.viewer` to the
+  service account in each project — or `roles/logging.privateLogViewer` to read
+  data-access audit logs.
+</Note>
+
+{/* TODO(pre-ship): confirm logging.viewer suffices; Google's setup doc names roles/logging.admin. Swap if the verification spike shows admin is enforced. */}
+
+## Confirm the connection
+
+1. In Sidecar, select **Integrations → MCP Servers**.
+2. Find the **BigQuery** and **Cloud Logging** rows.
+3. After the IAM grants propagate, the status shows **Connected**.
+
+If a server shows **Auth error**, open its status detail: it lists the missing
+roles and the exact `gcloud` commands to fix them. Sidecar rechecks the
+connection hourly.
+
+Continue by [granting the server to an agent and selecting it for
+jobs](/products/agent-console/setup/give-agents-mcp-access).
+
+## Available tools
+
+The BigQuery server exposes read-oriented tools including `list_dataset_ids`,
+`list_table_ids`, `get_dataset_info`, `get_table_info`, and
+`execute_sql_readonly`. The Cloud Logging server exposes read-only tools for
+searching log entries and listing logs, buckets, and views. See Google's
+[BigQuery MCP reference](https://docs.cloud.google.com/bigquery/docs/reference/mcp)
+and [Cloud Logging MCP reference](https://docs.cloud.google.com/logging/docs/reference/v2_mcp/mcp).
+
+Queries run as the Sidecar service account, the same identity as the rest of
+your Sidecar BigQuery integration.
+
+## Alternative: self-hosted BigQuery MCP
+
+If you need tools Google's managed server does not provide, you can still host
+the open source [MCP Toolbox for Databases](https://mcp-toolbox.dev/documentation/connect-to/ides/bigquery_mcp/)
+behind an HTTPS endpoint that accepts a stable bearer token, and register it
+through the [custom connector](/integrations/mcp-servers/connect-an-mcp-server).
+Expose a read-only toolset for Agent Console jobs and do not publish an
+unauthenticated endpoint.
+
+## Troubleshooting
+
+<Accordion title="The server shows Auth error">
+  One or more IAM permissions are missing, or a grant has not propagated yet.
+  Open the server's status detail for the exact missing permissions and
+  commands. IAM changes can take a few minutes to take effect.
+</Accordion>
+
+<Accordion title="Queries are denied for a specific project">
+  The Sidecar custom role must be granted in every project agents query, not
+  only the service account's home project. Check the project named in the
+  error.
+</Accordion>
+
+<Accordion title="Agents see datasets they should not">
+  Limit the service account's read access with dataset-level access controls
+  that cover only the datasets agents may read.
+</Accordion>

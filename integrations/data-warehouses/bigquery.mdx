@@ -21,18 +21,20 @@ You'll need to create a custom role and service account in GCP. This role and se
 
     | # | Permission | Reason |
     |---|-----------|--------|
-    | 1 | `bigquery.datasets.get` | Metadata Ingestion |
-    | 2 | `bigquery.tables.get` | Metadata Ingestion |
-    | 3 | `bigquery.tables.getData` | Metadata Ingestion |
-    | 4 | `bigquery.tables.list` | Metadata Ingestion |
-    | 5 | `resourcemanager.projects.get` | Metadata Ingestion |
-    | 6 | `bigquery.jobs.create` | Metadata Ingestion |
-    | 7 | `bigquery.jobs.listAll` | Metadata Ingestion |
-    | 8 | `bigquery.routines.get` | Stored Procedure |
-    | 9 | `bigquery.routines.list` | Stored Procedure |
-    | 10 | `bigquery.readsessions.create` | Usage & Lineage Workflow |
-    | 11 | `bigquery.readsessions.getData` | Usage & Lineage Workflow |
-    | 12 | `logging.operations.list` | Incremental Metadata Ingestion |
+    | 1 | `bigquery.datasets.create` | Sidecar dataset setup |
+    | 2 | `bigquery.datasets.get` | Metadata Ingestion |
+    | 3 | `bigquery.tables.get` | Metadata Ingestion |
+    | 4 | `bigquery.tables.getData` | Metadata Ingestion |
+    | 5 | `bigquery.tables.list` | Metadata Ingestion |
+    | 6 | `resourcemanager.projects.get` | Metadata Ingestion |
+    | 7 | `bigquery.jobs.create` | Metadata Ingestion |
+    | 8 | `bigquery.jobs.listAll` | Metadata Ingestion |
+    | 9 | `bigquery.routines.get` | Stored Procedure |
+    | 10 | `bigquery.routines.list` | Stored Procedure |
+    | 11 | `bigquery.readsessions.create` | Usage & Lineage Workflow |
+    | 12 | `bigquery.readsessions.getData` | Usage & Lineage Workflow |
+    | 13 | `logging.operations.list` | Incremental Metadata Ingestion |
+    | 14 | `mcp.tools.call` | MCP tool calls for Agent Console jobs |
 
     5. Click `Create` to create the role.
     6. Repeat the role creation process for each Project you want Sidecar to ingest metadata for.
@@ -77,6 +79,7 @@ You'll need to create a custom role and service account in GCP. This role and se
         "bigquery.readsessions.create",
         "bigquery.readsessions.getData",
         "logging.operations.list",
+        "mcp.tools.call",
     )
 
     PERMISSIONS_CSV=$(IFS=,; echo "${PERMISSIONS[*]}")
@@ -117,3 +120,10 @@ You'll need to create a custom role and service account in GCP. This role and se
 
 - **Cloud Resource Manager API** and **Cloud Asset API** must be enabled.
 - Add the `Cloud Asset Viewer` role to the Sidecar service account.
+
+## Add BigQuery MCP to Agent Console
+
+The warehouse connection above does not automatically provide query tools to
+agents. The `mcp.tools.call` permission in the custom role enables Google's
+managed MCP servers. Follow [Set up BigQuery
+MCP](/integrations/mcp-servers/bigquery) to confirm the connection.
