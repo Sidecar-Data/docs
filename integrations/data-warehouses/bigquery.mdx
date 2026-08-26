@@ -34,7 +34,12 @@ You'll need to create a custom role and service account in GCP. This role and se
     | 11 | `bigquery.readsessions.create` | Usage & Lineage Workflow |
     | 12 | `bigquery.readsessions.getData` | Usage & Lineage Workflow |
     | 13 | `logging.operations.list` | Incremental Metadata Ingestion |
-    | 14 | `mcp.tools.call` | MCP tool calls for Agent Console jobs |
+    | 14 | `serviceusage.services.use` | Use the service account project for API quota and billing |
+    | 15 | `mcp.tools.call` | MCP tool calls for Agent Console jobs |
+
+    `serviceusage.services.use` lets Sidecar use the service account project for
+    API quota and billing. Keep it in this custom role; no additional IAM role
+    is required for this access.
 
     5. Click `Create` to create the role.
     6. Repeat the role creation process for each Project you want Sidecar to ingest metadata for.
@@ -52,6 +57,7 @@ You'll need to create a custom role and service account in GCP. This role and se
        3. Under "Add principals", enter the email address generated for the service account.
        4. Under "Assign roles", select the custom role you created.
        5. Click `Save`.
+
   </Tab>
   <Tab title="Bash Script">
     Replace the `PROJECTS`, `ROLE_ID`, `ROLE_TITLE`, and `ROLE_DESCRIPTION` with your own values:
@@ -79,6 +85,7 @@ You'll need to create a custom role and service account in GCP. This role and se
         "bigquery.readsessions.create",
         "bigquery.readsessions.getData",
         "logging.operations.list",
+        "serviceusage.services.use",
         "mcp.tools.call",
     )
 
@@ -99,6 +106,7 @@ You'll need to create a custom role and service account in GCP. This role and se
 
     echo "IAM role creation process completed!"
     ```
+
   </Tab>
 </Tabs>
 
@@ -116,10 +124,285 @@ You'll need to create a custom role and service account in GCP. This role and se
 2. Select the downloaded JSON key file from Step 2.
 3. Click `Test` then `Save`.
 
-## 4. Additional Permissions
+## 4. Additional permissions
 
 - **Cloud Resource Manager API** and **Cloud Asset API** must be enabled.
 - Add the `Cloud Asset Viewer` role to the Sidecar service account.
+
+## 5. Optional Storage Read API activity
+
+<Accordion title="Capture Storage Read API activity for deprecation recommendations">
+  Spark, Dataproc, and other clients can read BigQuery tables through the
+  Storage Read API without creating a query job. Complete this setup if you
+  want Sidecar to treat those direct reads as activity when evaluating
+  query activity.
+
+Sidecar reads from one dedicated Cloud Logging view for each BigQuery
+integration. The view must receive matching events from every project that
+owns BigQuery tables selected in Sidecar.
+
+<Note>
+  Reuse the service account and JSON key from steps 1–3. You don't need a new
+  service account or key. The existing `logging.operations.list` permission does
+  not grant access to Data Access logs.
+</Note>
+
+<Warning>
+  Logging sinks route only new log entries. Creating a sink with 90-day
+  retention does not backfill the previous 90 days. Existing recommendations
+  might remain until the affected table is read again.
+</Warning>
+
+### Before you begin
+
+Gather the following values:
+
+- **Sidecar service account email:** the `client_email` in the JSON key you
+  uploaded to Sidecar.
+- **BigQuery project IDs:** every project that owns tables selected in the
+  Sidecar integration.
+- **Logging project ID:** the project that will own the dedicated log bucket
+  and view. For one BigQuery project, use that same project.
+- **Retention period:** use at least 90 days. If your Sidecar deprecation
+  inactivity threshold is longer than 90 days, use at least that threshold
+  plus one day.
+
+Enable `logging.googleapis.com` in the logging project and in the service
+account's project (`project_id` in the JSON key). These are often the same
+project. Ensure the Sidecar custom role is granted to the service account in
+that project and includes `serviceusage.services.use`. If the custom role was
+created only in other projects, create or update the same project-level custom
+role here and grant it to the Sidecar service account. No other Service Usage
+permissions are required for this setup.
+
+  <Tabs>
+    <Tab title="GCP Console">
+      ### Create the log bucket
+
+      1. Select the logging project in the Google Cloud Console.
+      2. Open **APIs & Services → Library → Cloud Logging API** and click
+         **Enable** if the API isn't already enabled.
+      3. Open **Logging → Logs Storage** and click **Create log bucket**.
+      4. Enter `sidecar-bigquery-storage-reads` as the bucket name.
+      5. Choose a location and record it. The location can't be changed later.
+      6. Set the retention period determined above.
+      7. Leave **Upgrade to use Observability Analytics** unchecked. Sidecar
+         doesn't require it.
+      8. Click **Create bucket**.
+
+      Google Cloud charges additional retention costs for logs kept longer than
+      30 days.
+
+      ### Route Storage API reads into the bucket
+
+      Repeat these steps in every BigQuery project selected in Sidecar:
+
+      1. Select the BigQuery project in the Google Cloud Console.
+      2. Open **Logging → Log Router** and click **Create sink**.
+      3. Enter `sidecar-bigquery-storage-reads` as the sink name.
+      4. Choose **Cloud Logging bucket** as the sink service.
+      5. Select the dedicated bucket. If the bucket is in another project, use
+         its full destination:
+
+         ```text
+         logging.googleapis.com/projects/LOGGING_PROJECT_ID/locations/LOCATION/buckets/sidecar-bigquery-storage-reads
+         ```
+
+      6. In **Build inclusion filter**, enter:
+
+         ```text
+         log_id("cloudaudit.googleapis.com/data_access")
+         resource.type="bigquery_table"
+         protoPayload.methodName="google.cloud.bigquery.storage.v1.BigQueryRead.ReadRows"
+         ```
+
+      7. Add no exclusion filters and click **Create sink**.
+      8. If the bucket is in a different project, open the sink details and copy
+         its writer identity. In the logging project, grant that identity
+         **Logs Bucket Writer** (`roles/logging.bucketWriter`). A same-project
+         destination doesn't need this grant.
+
+      A project-level sink sees only logs that originate in that project. The
+      Spark or Dataproc execution project isn't a substitute for a project that
+      owns selected BigQuery tables.
+
+      ### Create the restricted log view
+
+      1. Return to **Logging → Logs Storage** in the logging project.
+      2. Open the `sidecar-bigquery-storage-reads` bucket.
+      3. Under **Log views**, click **Create log view**.
+      4. Enter `sidecar-bigquery-storage-reads` as the view name.
+      5. Enter this view filter:
+
+         ```text
+         log_id("cloudaudit.googleapis.com/data_access") AND
+         resource.type="bigquery_table"
+         ```
+
+      6. Save the view.
+      7. From the view's **Actions** menu, select **Adjust permissions**.
+      8. Add the Sidecar service account email and assign **Logs View Accessor**
+         (`roles/logging.viewAccessor`).
+
+      Grant the role on the view itself. Don't grant Sidecar
+      `roles/logging.privateLogViewer`, project-level
+      `roles/logging.viewAccessor`, `roles/logging.bucketWriter`, or a Logging
+      administration role.
+    </Tab>
+
+    <Tab title="Terraform">
+      The following example supports one or more BigQuery projects. Every source
+      project routes matching events into one bucket and view.
+
+      ```hcl
+      variable "logging_project_id" {
+        type = string
+      }
+
+      variable "logging_location" {
+        type    = string
+        default = "global"
+      }
+
+      variable "bigquery_project_ids" {
+        type = set(string)
+      }
+
+      variable "sidecar_service_account_email" {
+        type = string
+      }
+
+      variable "retention_days" {
+        type    = number
+        default = 90
+      }
+
+      locals {
+        logging_api_projects = setunion(
+          var.bigquery_project_ids,
+          toset([var.logging_project_id]),
+        )
+      }
+
+      resource "google_project_service" "logging" {
+        for_each = local.logging_api_projects
+
+        project            = each.value
+        service            = "logging.googleapis.com"
+        disable_on_destroy = false
+      }
+
+      resource "google_logging_project_bucket_config" "sidecar_storage_reads" {
+        project        = var.logging_project_id
+        location       = var.logging_location
+        bucket_id      = "sidecar-bigquery-storage-reads"
+        retention_days = var.retention_days
+
+        depends_on = [google_project_service.logging]
+      }
+
+      resource "google_logging_project_sink" "sidecar_storage_reads" {
+        for_each = var.bigquery_project_ids
+
+        project     = each.value
+        name        = "sidecar-bigquery-storage-reads"
+        destination = "logging.googleapis.com/${google_logging_project_bucket_config.sidecar_storage_reads.id}"
+        filter      = <<-EOT
+          log_id("cloudaudit.googleapis.com/data_access")
+          resource.type="bigquery_table"
+          protoPayload.methodName="google.cloud.bigquery.storage.v1.BigQueryRead.ReadRows"
+        EOT
+
+        unique_writer_identity = each.value != var.logging_project_id
+      }
+
+      locals {
+        cross_project_sink_writers = {
+          for project_id, sink in google_logging_project_sink.sidecar_storage_reads :
+          project_id => sink.writer_identity
+          if project_id != var.logging_project_id
+        }
+      }
+
+      resource "google_project_iam_member" "cross_project_sink_writer" {
+        for_each = local.cross_project_sink_writers
+
+        project = var.logging_project_id
+        role    = "roles/logging.bucketWriter"
+        member  = each.value
+      }
+
+      resource "google_logging_log_view" "sidecar_storage_reads" {
+        name   = "sidecar-bigquery-storage-reads"
+        bucket = google_logging_project_bucket_config.sidecar_storage_reads.id
+        filter = <<-EOT
+          log_id("cloudaudit.googleapis.com/data_access") AND
+          resource.type="bigquery_table"
+        EOT
+      }
+
+      resource "google_logging_log_view_iam_member" "sidecar" {
+        parent   = "projects/${var.logging_project_id}"
+        location = var.logging_location
+        bucket   = google_logging_project_bucket_config.sidecar_storage_reads.bucket_id
+        name     = google_logging_log_view.sidecar_storage_reads.name
+        role     = "roles/logging.viewAccessor"
+        member   = "serviceAccount:${var.sidecar_service_account_email}"
+      }
+
+      output "sidecar_storage_read_log_view_resource_name" {
+        value = google_logging_log_view.sidecar_storage_reads.id
+      }
+      ```
+
+      If the service account's project (`project_id` in the JSON key) isn't
+      included above, enable `logging.googleapis.com` there separately. Create
+      or update the Sidecar project-level custom role in that project so it
+      includes `serviceusage.services.use`, then grant that custom role to the
+      Sidecar service account. No other Service Usage permissions are required
+      for this setup.
+    </Tab>
+
+  </Tabs>
+
+### Add the view to Sidecar
+
+Copy the complete view resource name. It has this format:
+
+```text
+projects/LOGGING_PROJECT_ID/locations/LOCATION/buckets/sidecar-bigquery-storage-reads/views/sidecar-bigquery-storage-reads
+```
+
+In Sidecar, open **Integrations → BigQuery**, enter this value in
+**Storage Read LogView resource name**, and click **Save**. Enter the full
+resource name, not a Google Cloud Console URL or a project ID.
+
+### Verify the view
+
+After a new Spark or direct Storage API read completes, run this command in
+Cloud Shell:
+
+```bash
+gcloud logging read \
+  'protoPayload.methodName="google.cloud.bigquery.storage.v1.BigQueryRead.ReadRows"' \
+  --project=LOGGING_PROJECT_ID \
+  --bucket=sidecar-bigquery-storage-reads \
+  --location=LOCATION \
+  --view=sidecar-bigquery-storage-reads \
+  --freshness=1d \
+  --limit=10
+```
+
+Sink and IAM changes can take several minutes to propagate. If your
+organization uses intercepting sinks, confirm that a fresh test read reaches
+this dedicated view.
+
+Learn more in Google's guides to [route
+logs](https://docs.cloud.google.com/logging/docs/export/configure_export_v2),
+[manage log buckets](https://docs.cloud.google.com/logging/docs/buckets), and
+[configure log views](https://docs.cloud.google.com/logging/docs/logs-views).
+
+</Accordion>
 
 ## Add BigQuery MCP to Agent Console
 

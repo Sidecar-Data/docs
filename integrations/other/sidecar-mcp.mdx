@@ -103,6 +103,48 @@ Use a token for clients without OAuth support, service accounts, or CI.
   </Tab>
 </Tabs>
 
+## Teach your agent when to use Sidecar
+
+Connecting the server makes Sidecar's tools available, but your agent might not
+use them unless you tell it when they matter. Add the following block to the
+`CLAUDE.md` or `AGENTS.md` file in your data project. In a monorepo, add it to
+the instruction file closest to your dbt or analytics code.
+
+```markdown
+## Use Sidecar for data context
+
+Use the connected Sidecar MCP proactively whenever a task involves warehouse
+data, dbt models or sources, BI assets, lineage, or business definitions.
+
+- When a table, model, source, column, dashboard, metric, or business concept is
+  named, resolve or search for it in Sidecar. Ground your answer in catalog
+  metadata instead of guessing identifiers, schemas, owners, or definitions.
+- Before planning a refactor or changing warehouse SQL, a dbt model, a source
+  definition, or a schema contract, inspect the relevant upstream and downstream
+  lineage. Inspect column-level lineage when a column changes.
+- After making one of those changes, calculate downstream impact. Report the
+  affected models, tables, dashboards, and other consumers before declaring the
+  work complete.
+- For open-ended discovery, start with the catalog overview, then search and
+  fetch detailed asset context as needed. Use linked tests, tickets, team
+  discussions, knowledge-base content, and Context Garage content when relevant
+  to explain business intent.
+- If Sidecar returns multiple matches, disambiguate them using their identifiers
+  and source systems. Do not silently choose a similarly named asset.
+- Treat Sidecar as the source of truth for cataloged metadata and cross-tool
+  lineage. Treat repository files as the source of truth for unsynced local
+  code, and call out when the two might differ. Sidecar is read-only; use other
+  authorized tools for live data queries or changes.
+- Summarize the Sidecar evidence that informed the work, including the resolved
+  asset identifiers and any important downstream impact. If Sidecar is
+  unavailable or finds no match, say so and continue with the best local
+  evidence.
+```
+
+If your AI client supports reusable skills or rules, you can use the same text
+there instead. Scope it to data and dbt work so Sidecar is invoked when its
+catalog context is useful.
+
 ## What you can ask
 
 Once connected, try prompts like:
