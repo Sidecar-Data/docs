@@ -4,78 +4,382 @@ description: "Connect your dbt Core project to Sidecar"
 icon: "terminal"
 ---
 
-## How It Works
+## How the integration works
 
-**dbt Core** generates `manifest.json` and `run_results.json` artifacts containing metadata about your dbt project. Sidecar ingests these artifacts to map your models, tests, and lineage.
+dbt Core writes execution artifacts to its `target` directory. Send those artifacts to Sidecar after each production dbt command that you want Sidecar to monitor.
 
-There are two ways to integrate dbt Core with Sidecar:
+You do not need to change how you invoke dbt. Add the Sidecar webhook to the production workflow that already runs your dbt commands.
 
-1. **Manual upload** — upload artifacts through the Sidecar UI
-2. **Automated upload** — use a credential token to send artifacts from your CI/CD pipeline
+<Note>
+  Configure the webhook only in the environments and workflows that you want
+  Sidecar to monitor. For example, add it to your production Airflow DAG without
+  adding it to development DAGs.
+</Note>
 
-## 1. Generate Artifacts
+### Artifacts to send
 
-- Install dbt Core locally: [dbt Installation Guide](https://docs.getdbt.com/docs/core/installation-overview)
-- Run `dbt run` or `dbt build`. dbt Core will generate `manifest.json` and `run_results.json` in the `target` folder.
+| dbt command                           | Required result artifact | Current project artifact to include | Failures captured                                     |
+| ------------------------------------- | ------------------------ | ----------------------------------- | ----------------------------------------------------- |
+| `dbt build`, `dbt run`, or `dbt test` | `run_results.json`       | `manifest.json`                     | Model and data test failures                          |
+| `dbt source freshness`                | `sources.json`           | `manifest.json`                     | Source freshness warnings, errors, and runtime errors |
 
-## 2. Manual Upload via the Sidecar UI
+dbt overwrites artifacts in the `target` directory when another dbt command runs. Upload the artifacts immediately after each command that you want to monitor.
 
-1. On the **Onboarding Page** (or the **Settings Page**), navigate to the **Connect your dbt** section and switch to the **dbt Core** tab.
-2. Upload the two artifacts generated in Step 1.
-3. Click `Test`, then click `Save`.
+<Note>
+  The result artifact contains the dbt invocation ID and command, so these do
+  not need to be separate webhook fields. Sidecar also does not require the dbt
+  exit code, target name, Git commit SHA, or orchestrator run ID. Your workflow
+  only needs to preserve the dbt exit code so that the original task still
+  reports failure.
+</Note>
 
-## 3. Automated Upload via API
+Include the current `manifest.json` whenever dbt produces it. Sidecar stores the newest manifest as the authoritative project graph for Catalog Sync, and it identifies the adapter and warehouse for Firefighter. Run results are additive execution history and do not have to be paired with a manifest from the same invocation. If dbt exits before writing a manifest, Sidecar can still use the result artifact for Firefighter and can apply it to the newest manifest already stored. If Sidecar has never received a manifest for the project, Catalog Sync waits for one before building the dbt asset inventory.
 
-Click the `Generate` button in the Sidecar UI to obtain a **credential token**. Then use the API to upload artifacts:
+## Before you begin
+
+You need:
+
+- A dbt Core project that can run in the environment you want to monitor
+- Network access from that environment to `https://service-platform.sidecardata.com`
+- A Sidecar artifact token
+
+In Sidecar, open the **dbt Core** connection and click **Generate** to create an artifact token. Store the token in your orchestrator or CI/CD secret manager as `SIDECAR_ARTIFACT_TOKEN`.
+
+## Upload artifacts with the webhook
+
+Choose the result type produced by your dbt command.
+
+<Tabs>
+  <Tab title="Models and data tests">
+    Send `manifest.json` and `run_results.json`:
+
+    ```bash
+    curl --fail-with-body --silent --show-error \
+      --request POST \
+      'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+      --header "X-Artifact-Token: ${SIDECAR_ARTIFACT_TOKEN}" \
+      --form 'manifest=@target/manifest.json' \
+      --form 'run_results=@target/run_results.json'
+    ```
+  </Tab>
+
+  <Tab title="Source freshness">
+    Send `manifest.json` and `sources.json`:
+
+    ```bash
+    curl --fail-with-body --silent --show-error \
+      --request POST \
+      'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+      --header "X-Artifact-Token: ${SIDECAR_ARTIFACT_TOKEN}" \
+      --form 'manifest=@target/manifest.json' \
+      --form 'sources=@target/sources.json'
+    ```
+  </Tab>
+</Tabs>
+
+The copy-paste patterns send the current manifest so Firefighter has full warehouse context and Catalog Sync receives the latest project graph. No additional webhook metadata is required.
+
+The webhook must run even when dbt exits with an error. Use the pattern for your orchestrator below.
+
+## Configure your workflow
+
+Choose the environment that runs your production dbt commands.
+
+<Tabs>
+  <Tab title="Shell">
+
+Capture the dbt exit code locally, upload the artifacts, and then return the original dbt failure. The exit code controls the workflow status and is not sent to Sidecar. If dbt succeeds but the upload fails, return the upload failure.
+
+### Model runs and data tests
 
 ```bash
-curl --location 'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
-  --header 'X-Artifact-Token: {YOUR_TOKEN}' \
-  --form 'run_results=@"path/to/run_results.json"' \
-  --form 'manifest=@"path/to/manifest.json"'
+#!/usr/bin/env bash
+set -uo pipefail
+
+dbt_status=0
+dbt build || dbt_status=$?
+
+upload_status=0
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+  --header "X-Artifact-Token: ${SIDECAR_ARTIFACT_TOKEN}" \
+  --form 'manifest=@target/manifest.json' \
+  --form 'run_results=@target/run_results.json' || upload_status=$?
+
+if [ "${dbt_status}" -ne 0 ]; then
+  exit "${dbt_status}"
+fi
+
+exit "${upload_status}"
 ```
 
-### Python example
+### Source freshness
 
-```python
-import requests
+```bash
+#!/usr/bin/env bash
+set -uo pipefail
 
-artifact_token = '{YOUR_TOKEN}'
-run_results_path = 'path/to/run_results.json'
-manifest_path = 'path/to/manifest.json'
+dbt_status=0
+dbt source freshness || dbt_status=$?
 
-url = 'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/'
+upload_status=0
+curl --fail-with-body --silent --show-error \
+  --request POST \
+  'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+  --header "X-Artifact-Token: ${SIDECAR_ARTIFACT_TOKEN}" \
+  --form 'manifest=@target/manifest.json' \
+  --form 'sources=@target/sources.json' || upload_status=$?
 
-headers = {
-    'X-Artifact-Token': artifact_token,
-}
+if [ "${dbt_status}" -ne 0 ]; then
+  exit "${dbt_status}"
+fi
 
-files = {
-    'run_results': open(run_results_path, 'rb'),
-    'manifest': open(manifest_path, 'rb'),
-}
-
-response = requests.post(url, headers=headers, files=files)
-print('Status Code:', response.status_code)
-print('Response:', response.text)
+exit "${upload_status}"
 ```
 
-### Airflow example
+  </Tab>
+
+  <Tab title="Airflow">
+
+Create a downstream upload task with the `all_done` trigger rule. Airflow will run the upload after the upstream dbt task succeeds or fails.
 
 ```python
 from airflow.operators.bash import BashOperator
+from airflow.utils.trigger_rule import TriggerRule
 
-upload_to_sidecar = BashOperator(
-    task_id="upload_artifacts_to_sidecar",
-    bash_command="""
-    cd /home/airflow/gcs/data/dbt/your-dbt-project
-    curl --location \
-      'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
-      --header 'X-Artifact-Token: {{ var.value.sidecar_token }}' \
-      --form 'run_results=@"target/run_results.json"' \
-      --form 'manifest=@"target/manifest.json"'
-    """,
+
+def sidecar_upload_task(task_id: str, artifact_name: str) -> BashOperator:
+    return BashOperator(
+        task_id=task_id,
+        trigger_rule=TriggerRule.ALL_DONE,
+        append_env=True,
+        env={
+            "SIDECAR_ARTIFACT_TOKEN": "{{ var.value.sidecar_artifact_token }}",
+        },
+        bash_command=f"""
+        set -euo pipefail
+        cd /shared/dbt/your-dbt-project
+        curl --fail-with-body --silent --show-error \\
+          --request POST \\
+          'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \\
+          --header "X-Artifact-Token: ${{SIDECAR_ARTIFACT_TOKEN}}" \\
+          --form 'manifest=@target/manifest.json' \\
+          --form '{artifact_name}=@target/{artifact_name}.json'
+        """,
+    )
+
+
+upload_run_results = sidecar_upload_task(
+    task_id="upload_dbt_run_results_to_sidecar",
+    artifact_name="run_results",
 )
+main_dbt_task >> upload_run_results
 
-refresh_seeds >> main_dbt_task >> upload_to_sidecar
+upload_freshness = sidecar_upload_task(
+    task_id="upload_dbt_freshness_to_sidecar",
+    artifact_name="sources",
+)
+source_freshness_task >> upload_freshness
 ```
+
+<Warning>
+  The dbt task and upload task must use the same `target` directory. Mount a
+  shared or persistent volume when the tasks run on different workers or in
+  different pods. Do not use a downstream upload task for artifacts stored only
+  in an ephemeral dbt container.
+</Warning>
+
+If parallel dbt tasks share a project, give each task a separate target directory. This prevents one invocation from overwriting another invocation's artifacts before Sidecar receives them.
+
+  </Tab>
+
+  <Tab title="Dagster">
+
+For a Dagster job dedicated to dbt, attach success and failure hooks to the job. The hooks upload the newest result artifact from a shared target directory after each dbt step, including successful freshness checks that contain warnings.
+
+```python
+import os
+from pathlib import Path
+
+import requests
+from dagster import failure_hook, job, success_hook
+
+
+SIDECAR_UPLOAD_URL = (
+    "https://service-platform.sidecardata.com/"
+    "api/v1/setup/dbt-core/upload-artifacts/"
+)
+DBT_TARGET_PATH = Path("/shared/dbt/your-dbt-project/target")
+
+
+def upload_dbt_artifacts_to_sidecar(context):
+    manifest_path = DBT_TARGET_PATH / "manifest.json"
+    result_candidates = [
+        ("run_results", DBT_TARGET_PATH / "run_results.json"),
+        ("sources", DBT_TARGET_PATH / "sources.json"),
+    ]
+    result_name, result_path = max(
+        ((name, path) for name, path in result_candidates if path.exists()),
+        key=lambda candidate: candidate[1].stat().st_mtime,
+    )
+
+    with manifest_path.open("rb") as manifest_file, result_path.open("rb") as result_file:
+        response = requests.post(
+            SIDECAR_UPLOAD_URL,
+            headers={
+                "X-Artifact-Token": os.environ["SIDECAR_ARTIFACT_TOKEN"],
+            },
+            files={
+                "manifest": manifest_file,
+                result_name: result_file,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+
+    context.log.info("Uploaded dbt invocation to Sidecar")
+
+
+@failure_hook
+def upload_dbt_artifacts_after_failure(context):
+    upload_dbt_artifacts_to_sidecar(context)
+
+
+@success_hook
+def upload_dbt_artifacts_after_success(context):
+    upload_dbt_artifacts_to_sidecar(context)
+
+
+@job(
+    hooks={
+        upload_dbt_artifacts_after_failure,
+        upload_dbt_artifacts_after_success,
+    }
+)
+def production_dbt_job():
+    # Keep your existing dbt ops and assets here.
+    ...
+```
+
+The hooks must be able to read the same target directory as the dbt step. Use this pattern only for jobs whose steps run dbt. If your Dagster run launcher uses ephemeral containers, persist the target directory to a shared volume or call the webhook inside the run container.
+
+  </Tab>
+
+  <Tab title="GitHub Actions">
+
+Add an upload step after the dbt step. The `!cancelled()` condition allows the upload to run after success or failure, while avoiding an upload after the workflow is canceled.
+
+### Model runs and data tests
+
+```yaml
+- name: Run dbt
+  run: dbt build
+
+- name: Upload dbt artifacts to Sidecar
+  if: ${{ !cancelled() }}
+  env:
+    SIDECAR_ARTIFACT_TOKEN: ${{ secrets.SIDECAR_ARTIFACT_TOKEN }}
+  run: |
+    curl --fail-with-body --silent --show-error \
+      --request POST \
+      'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+      --header "X-Artifact-Token: ${SIDECAR_ARTIFACT_TOKEN}" \
+      --form 'manifest=@target/manifest.json' \
+      --form 'run_results=@target/run_results.json'
+```
+
+### Source freshness
+
+```yaml
+- name: Check source freshness
+  run: dbt source freshness
+
+- name: Upload dbt freshness to Sidecar
+  if: ${{ !cancelled() }}
+  env:
+    SIDECAR_ARTIFACT_TOKEN: ${{ secrets.SIDECAR_ARTIFACT_TOKEN }}
+  run: |
+    curl --fail-with-body --silent --show-error \
+      --request POST \
+      'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+      --header "X-Artifact-Token: ${SIDECAR_ARTIFACT_TOKEN}" \
+      --form 'manifest=@target/manifest.json' \
+      --form 'sources=@target/sources.json'
+```
+
+GitHub Actions retains the failed status from the dbt step after running the conditional upload step.
+
+  </Tab>
+
+  <Tab title="Kubernetes">
+
+Run the webhook in the same container as dbt so it can read the local target directory. The shell returns the dbt failure after attempting the upload.
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: production-dbt
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: dbt
+          image: your-dbt-image:latest
+          env:
+            - name: SIDECAR_ARTIFACT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: sidecar-dbt
+                  key: artifact-token
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -uo pipefail
+              dbt_status=0
+              dbt build || dbt_status=$?
+
+              upload_status=0
+              curl --fail-with-body --silent --show-error \
+                --request POST \
+                'https://service-platform.sidecardata.com/api/v1/setup/dbt-core/upload-artifacts/' \
+                --header "X-Artifact-Token: ${SIDECAR_ARTIFACT_TOKEN}" \
+                --form 'manifest=@target/manifest.json' \
+                --form 'run_results=@target/run_results.json' || upload_status=$?
+
+              if [ "${dbt_status}" -ne 0 ]; then
+                exit "${dbt_status}"
+              fi
+              exit "${upload_status}"
+```
+
+Use the `sources` form field and `target/sources.json` when the job runs `dbt source freshness`.
+
+  </Tab>
+</Tabs>
+
+## Manual upload
+
+You can also upload artifacts while creating or editing a dbt Core connection:
+
+1. Open the **dbt Core** tab on the onboarding or settings page.
+2. Upload `manifest.json` and `run_results.json` from a `dbt build`, `dbt run`, or `dbt test` command.
+3. Click **Test**, then click **Save**.
+
+Manual uploads update Sidecar's dbt metadata. Use automated webhook uploads for Firefighter so Sidecar receives failures when they occur.
+
+## Troubleshooting
+
+### Sidecar did not receive a failed run
+
+Confirm that the upload step uses an always-run or failure callback. A command such as `dbt build && curl ...` skips the webhook when dbt fails.
+
+### The artifact file does not exist
+
+Confirm that the webhook runs in the same working directory as dbt and uses the configured dbt target path. For ephemeral tasks and pods, upload before the container exits or mount a shared volume.
+
+### Sidecar received the wrong invocation
+
+Upload immediately after each dbt command. Do not let another dbt command overwrite the target directory first. Use separate target directories for parallel invocations.
