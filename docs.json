@@ -135,6 +135,7 @@
             "pages": [
               "integrations/mcp-servers/connect-an-mcp-server",
               "integrations/mcp-servers/snowflake",
+              "integrations/mcp-servers/dbt-cloud",
               "integrations/mcp-servers/bigquery",
               "integrations/mcp-servers/databricks",
               "integrations/mcp-servers/redshift",

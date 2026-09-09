@@ -1,0 +1,96 @@
+---
+title: dbt Cloud MCP
+description: "Give Sidecar agents access to dbt Cloud investigation and retry tools"
+icon: "cloud"
+---
+
+Enable dbt Cloud MCP so Agent Console agents can inspect jobs, run errors,
+artifacts, lineage, and model health and performance. Agents can also retry an
+existing job run.
+
+## Before you start
+
+You need:
+
+- Account Admin permissions in Sidecar
+- A connected [dbt Cloud integration](/integrations/transformation/dbt-cloud)
+- An **Access URL** saved on the integration's **Connection** tab, including for accounts that use standard URLs
+- A production deployment environment accessible to the integration credential
+- A dbt Cloud service account token with access to the projects and operations your agents need
+
+The MCP token is shared by agent runs that have access to this server. Use an
+organization-wide service account token.
+
+## Enable dbt Cloud MCP in Sidecar
+
+1. In Sidecar, open **Integrations → dbt Cloud**.
+2. On the **Connection** tab, confirm that your connection and **Access URL** are saved.
+3. Open the **MCP** tab.
+4. Click **Enable MCP**.
+5. Paste your token into **Service token (organization-wide)**.
+6. Click **Add server**.
+7. In **Integrations → MCP Servers**, confirm that the server is connected.
+
+You can also open this setup from **Integrations → MCP Servers → Add MCP → dbt Cloud**.
+
+Sidecar configures the endpoint and production environment automatically, then
+connects to the server and discovers its tools. You do not need to enter an MCP
+URL or configure custom headers. The token is stored as a write-only credential
+and is never displayed again.
+
+<Note>
+  Sidecar currently selects the first production environment it finds while
+  checking the account's projects. It does not automatically switch to the
+  environment of each failing run. Keep this limitation in mind if your account
+  has multiple production environments.
+</Note>
+
+## Finish agent setup
+
+Registering the server does not give it to an agent automatically. [Grant the
+dbt Cloud MCP server to an agent and select it for jobs](/products/agent-console/setup/give-agents-mcp-access).
+
+For native dbt Firefighter jobs, grant the server to the **Reliability** agent.
+Sidecar adds the matching dbt Cloud server to the job's connections when it is
+available. This optional connection works alongside the job's warehouse
+connection.
+
+<Warning>
+  The server includes `retry_job_run`, which executes work in dbt Cloud. Configure
+  [MCP approval settings](/products/agent-console/setup/give-agents-mcp-access#configure-approvals-for-an-mcp-server)
+  if these actions require review.
+</Warning>
+
+The connection exposes investigation tools and retries. It does not expose
+`trigger_job_run`, `cancel_job_run`, `execute_sql`, or Semantic Layer tools.
+
+To let an agent inspect or change dbt source code, also [connect the
+repository](/products/agent-console/setup/connect-repositories).
+
+To rotate credentials or refresh tools, use the row actions in
+**Integrations → MCP Servers**. See [Manage a server](/integrations/mcp-servers/connect-an-mcp-server#manage-a-server).
+
+## Troubleshooting
+
+<Accordion title="Enable MCP is unavailable">
+  Save the dbt Cloud integration first. Confirm that **Access URL** is populated
+  on the **Connection** tab, even if your account uses a standard dbt Cloud URL.
+</Accordion>
+
+<Accordion title="No production environment could be resolved">
+  Confirm that the account has a production deployment environment and that the
+  integration credential can access its projects and environments. Then save
+  the MCP credential again.
+</Accordion>
+
+<Accordion title="The Account ID or Access URL changed">
+  In **Integrations → MCP Servers**, select **Replace token** for the dbt Cloud
+  server and save its service token again. Sidecar must resolve the production
+  environment again before the connection can be used.
+</Accordion>
+
+<Accordion title="The agent cannot see dbt Cloud tools">
+  Confirm that the server is connected, granted to the agent, and enabled for
+  the job. For native dbt Firefighter jobs, the server must belong to the dbt
+  Cloud integration used by the job.
+</Accordion>

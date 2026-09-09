@@ -24,6 +24,12 @@ Use the guide for your deployment:
   </Card>
 </CardGroup>
 
+## Enable dbt Cloud tools
+
+For live job inspection, model diagnostics, and run retries, [enable dbt Cloud
+MCP](/integrations/mcp-servers/dbt-cloud), then grant it to the agent. This is a
+separate step from connecting dbt metadata and does not provide repository access.
+
 ## Connect the code repository
 
 Follow [Connect repositories](/products/agent-console/setup/connect-repositories), then confirm that the repository containing the dbt project appears under the agent's **Settings → Scope**.
