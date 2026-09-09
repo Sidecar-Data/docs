@@ -14,9 +14,12 @@ Register an MCP server at the workspace level before granting it to an Agent Con
 
 You must be an Account Admin to manage MCP servers.
 
-## Warehouse MCP guides
+## MCP setup guides
 
 <CardGroup cols={2}>
+  <Card title="dbt Cloud MCP" icon="cloud" href="/integrations/mcp-servers/dbt-cloud">
+    Give agents dbt Cloud investigation and retry tools.
+  </Card>
   <Card title="Snowflake MCP" icon="snowflake" href="/integrations/mcp-servers/snowflake">
     Use Sidecar's native Snowflake MCP setup.
   </Card>
@@ -89,6 +92,8 @@ Choose a setup method.
     Connect [dbt Cloud](/integrations/transformation/dbt-cloud) first. In **Add MCP**, select **dbt Cloud** to open its MCP setup.
 
     Paste an organization-wide dbt Cloud service token. Do not use a personal token. Sidecar derives the server URL from the integration.
+
+    Follow [dbt Cloud MCP](/integrations/mcp-servers/dbt-cloud) for prerequisites and setup instructions.
   </Tab>
 </Tabs>
 
