@@ -67,6 +67,10 @@
             ]
           },
           {
+            "group": "Observability",
+            "pages": ["products/observability/monitors-as-code"]
+          },
+          {
             "group": "Context Garage",
             "pages": [
               "products/context-garage/key-concepts",
