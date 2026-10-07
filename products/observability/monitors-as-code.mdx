@@ -196,6 +196,10 @@ After setup, Sidecar syncs automatically whenever it refreshes your dbt catalog.
 
 If a monitor already exists on a table from the UI when you add a volume or freshness definition for the same table, the sync pauses on it and offers **Adopt**. Adopting hands the existing monitor and its history over to the code definition.
 
+## Let your coding agent write them
+
+If you use Claude Code, Cursor, or Codex in your dbt repository, install the [agent skill for monitors as code](/products/observability/monitors-as-code-agent-skill). It teaches the agent the schema and the rules on this page so it produces valid definitions.
+
 ## Troubleshooting
 
 <AccordionGroup>

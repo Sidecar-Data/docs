@@ -68,7 +68,10 @@
           },
           {
             "group": "Observability",
-            "pages": ["products/observability/monitors-as-code"]
+            "pages": [
+              "products/observability/monitors-as-code",
+              "products/observability/monitors-as-code-agent-skill"
+            ]
           },
           {
             "group": "Context Garage",
