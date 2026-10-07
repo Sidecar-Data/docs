@@ -1,19 +1,19 @@
 ---
 title: Agent skill for monitors as code
-description: "A copyable skill file that teaches coding agents how to write Sidecar monitor definitions"
+description: "Teach Claude Code, Cursor, or Codex to write valid Sidecar monitor definitions"
 icon: "robot"
 ---
 
-If you use a coding agent such as Claude Code, Cursor, or Codex in your dbt repository, give it this skill so it writes valid Sidecar monitor definitions on the first try. The skill encodes the schema, the rules the sync enforces, and the mistakes agents make most often.
+Give your coding agent this skill so it writes Sidecar monitor definitions that pass the sync on the first try.
 
 ## Install
 
 <Tabs>
   <Tab title="Claude Code">
-    Save the file below as `.claude/skills/monitors-as-code/SKILL.md` in your dbt repository. Claude Code loads it automatically when a task mentions monitors, and you can invoke it directly with `/monitors-as-code`.
+    Save the file as `.claude/skills/monitors-as-code/SKILL.md` in your dbt repository. Claude Code loads it when a task mentions monitors; `/monitors-as-code` invokes it directly.
   </Tab>
   <Tab title="Cursor">
-    Save the file below as `.cursor/rules/monitors-as-code.mdc` and add this header above the frontmatter so Cursor applies it to the right files:
+    Save the file as `.cursor/rules/monitors-as-code.mdc`, replacing the frontmatter with:
 
     ```yaml
     ---
@@ -24,32 +24,26 @@ If you use a coding agent such as Claude Code, Cursor, or Codex in your dbt repo
     ```
   </Tab>
   <Tab title="Codex and others">
-    Paste the body of the file below into your repository's `AGENTS.md` under a heading called **Sidecar monitors**, or keep it as a standalone file and reference it from there.
+    Paste the body into `AGENTS.md` under a **Sidecar monitors** heading.
   </Tab>
 </Tabs>
 
-## The skill
+## SKILL.md
 
-````markdown SKILL.md
+````markdown
 ---
 name: monitors-as-code
-description: Write and edit Sidecar monitor definitions in a dbt project, either in a model's config.meta.sidecar block or in sidecar/monitors.yml. Use when asked to add, change, rename, or remove a Sidecar monitor, a data quality check, a volume or freshness check, or an alert on a dbt model.
+description: Write and edit Sidecar monitor definitions in a dbt project, in a model's config.meta.sidecar block or in sidecar/monitors.yml. Use when asked to add, change, rename, or remove a Sidecar monitor, data quality check, volume or freshness check, or alert on a dbt model.
 ---
 
 # Sidecar monitors as code
 
-Sidecar reads monitor definitions from the dbt project and creates monitors from them. Definitions live in one of two places, and both use the same monitor schema:
+Sidecar creates monitors from definitions in the dbt project. Two locations, one schema:
 
-1. In the model's YAML under `config.meta.sidecar`. Reaches Sidecar through the production dbt run.
-2. In `sidecar/monitors.yml` at the repository root. Reaches Sidecar directly from Git on merge.
+1. Model YAML under `config.meta.sidecar` (never top-level `meta`). Reaches Sidecar via the production dbt run.
+2. `sidecar/monitors.yml` at the repo root. Reaches Sidecar from Git on merge. Use it for many models at once or for package models whose YAML is not in the repo.
 
-A monitor's identity is `<model>::<key>`. Changing the key creates a different monitor. Changing `name` does not.
-
-## Decide where to write
-
-- Adding a check to a model whose YAML you are already editing: use the model block.
-- Adding checks across many models, or on a model from a package whose YAML is not in this repo: use `sidecar/monitors.yml`.
-- Never define the same key for the same model in both places. The sync blocks both.
+Identity is `<model>::<key>`. A new key is a new monitor; a new `name` is not. Never define the same key for a model in both locations.
 
 ## Model block
 
@@ -60,112 +54,69 @@ models:
       meta:
         sidecar:
           version: 1
-          defaults:                       # optional, applies to every monitor below
-            schedule:
-              cron: "0 * * * *"
+          defaults:                 # optional, applies to all monitors below
+            schedule: { cron: "0 * * * *" }
           monitors:
-            orders_volume:                # key: ^[a-z][a-z0-9_]{0,63}$
+            orders_volume:          # key: ^[a-z][a-z0-9_]{0,63}$
               type: volume
               sensitivity: medium
             orders_freshness:
               type: freshness
-              freshness_threshold:
-                hours: 6
+              freshness_threshold: { hours: 6 }
             orders_negative_revenue:
               type: custom
               name: Orders with negative revenue
               sql: |
-                SELECT order_id
-                FROM [[ this ]]
-                WHERE net_revenue < 0
-              fail_when:
-                operator: gt
-                value: 0
-              investigation_instructions: |
-                Check recent pricing and refund changes before escalating.
+                SELECT order_id FROM [[ this ]] WHERE net_revenue < 0
+              fail_when: { operator: gt, value: 0 }
+              investigation_instructions: Check recent pricing and refund changes.
 ```
-
-Put the block under `config.meta`, never top-level `meta`.
 
 ## Repository file
 
 ```yaml
 version: 1
 defaults:
-  schedule:
-    cron: "0 */6 * * *"
+  schedule: { cron: "0 */6 * * *" }
 models:
-  - name: fct_orders                      # or unique_id: model.<project>.fct_orders
+  - name: fct_orders                # or unique_id: model.<project>.fct_orders
     defaults:
-      schedule:
-        cron: "30 * * * *"
+      schedule: { cron: "30 * * * *" }
     monitors:
-      orders_volume:
-        type: volume
-        sensitivity: high
+      orders_volume: { type: volume, sensitivity: high }
 ```
 
-Defaults apply in this order: file defaults, then entry defaults, then the monitor's own fields. Use `unique_id` when the model name is ambiguous or comes from a package.
+Defaults apply file → entry → monitor. Use `unique_id` for ambiguous or package models.
 
-## Monitor types
+## Types
 
-### custom
+**custom**: `sql` (required) is one SELECT returning the offending rows; Sidecar counts them. `fail_when` (required): `operator` in `gt gte lt lte eq neq`, integer `value`; fails when `count <operator> value`. Reference tables only as `[[ this ]]` or `[[ ref('model') ]]`; no `{{ }}`, no hard-coded names, no DDL/DML, no multiple statements, no trailing semicolon. Warehouse SQL dialect, no dbt macros. Referenced models must be in the warehouse the Sidecar source runs custom SQL on.
 
-Required: `sql`, `fail_when`.
+**volume**: `sensitivity` in `low medium high` (default `medium`). Model must be materialized as a table.
 
-- `sql` is a single SELECT that returns the offending rows. Sidecar wraps it in `SELECT COUNT(*)`, so select a key column and nothing expensive.
-- `fail_when.operator` is one of `gt`, `gte`, `lt`, `lte`, `eq`, `neq`. `fail_when.value` is a non-negative integer. The monitor fails when `row_count <operator> value` is true. The common pattern is "rows that violate the rule" with `gt 0`.
-- Reference tables only as `[[ this ]]` or `[[ ref('model_name') ]]`. Do not write `{{ ref() }}`, `{{ source() }}`, or hard-coded table names.
-- Every referenced model must live in the same warehouse the Sidecar source runs custom SQL on.
-- No DDL, DML, multiple statements, or trailing semicolons.
-- Use the warehouse's SQL dialect. Do not use dbt macros or Jinja.
-
-### volume
-
-Optional: `sensitivity` (`low`, `medium`, `high`; default `medium`).
-
-Binds to the warehouse table behind the model. The model must be materialized as a table, not a view.
-
-### freshness
-
-Required: `freshness_threshold` with `days` and/or `hours`, at least one above zero.
-Optional: `freshness_mode`: `row_count_change` (default) or `last_updated`. `last_updated` is unavailable on Redshift.
-
-Same table requirement as volume.
+**freshness**: `freshness_threshold` (required) with `days` and/or `hours`, at least one above zero. `freshness_mode`: `row_count_change` (default) or `last_updated` (not on Redshift). Table materialization required.
 
 ## Common fields
 
-- `name`: display name. Defaults to the key, humanized. Renaming keeps the monitor.
-- `schedule`: one of
-  - `{cron: "0 * * * *"}` (minimum interval 15 minutes)
-  - `{mode: interval, every_hours: N, days_of_week: [...]}` with N in 1, 2, 3, 4, 6, 8, 12 and Monday = 0
-  - `{mode: specific_hours, hours: [...], days_of_week: [...]}`
-  Numbers must be integers. `true` and `1.0` are rejected.
-- `notification_destinations`: list of `{type: slack, channel_id, channel_name}` or `{type: email, email}`; email must be on the company domain. Omit to use the source defaults.
-- `investigation_instructions`: free text the Reliability agent follows when the monitor fails. Write it as a short runbook.
+- `name`: display name; defaults to the key.
+- `schedule`: `{cron: "..."}` (15 min minimum), `{mode: interval, every_hours: 1|2|3|4|6|8|12, days_of_week: [...]}` (Monday = 0), or `{mode: specific_hours, hours: [...], days_of_week: [...]}`. Integers only; `true` and `1.0` are rejected. Every monitor needs a schedule from itself, its defaults, or the Sidecar source.
+- `notification_destinations`: `{type: slack, channel_id, channel_name}` or `{type: email, email}` on the company domain. Omit for source defaults.
+- `investigation_instructions`: short runbook for the Reliability agent on failure.
 
-A monitor needs a schedule from somewhere: its own, its block or entry defaults, or the Sidecar source defaults.
+No other fields. Unknown fields block the definition. There is no `enabled`; pausing happens in the Sidecar UI.
 
-## Editing rules
+## Edits
 
-- To change a threshold, SQL, schedule, or name: edit in place. Sidecar updates the monitor and keeps its history.
-- To rename: change the key. Sidecar moves the monitor if the table (volume, freshness) or SQL (custom) is unchanged.
-- To remove: delete the block. Sidecar retires the monitor and keeps its runs.
-- To change a monitor's type or move it to another table: delete it and add a new key. Changing these in place is blocked.
-- Do not add an `enabled` field. It is not part of the schema. Pausing is done in the Sidecar UI.
-- Do not add fields that are not listed here. Unknown fields block the definition.
+- Threshold, SQL, schedule, name: edit in place; history is kept.
+- Rename: change the key; Sidecar moves the monitor if its table (volume, freshness) or SQL (custom) is unchanged.
+- Remove: delete the block; the monitor is retired, runs are kept.
+- Type or table change: blocked. Delete and add under a new key.
 
-## Before you finish
+## Checklist
 
-- Keys match `^[a-z][a-z0-9_]{0,63}$` and are unique per model.
-- `version: 1` is present in every block and in the file.
-- Custom SQL references use `[[ this ]]` or `[[ ref('...') ]]` only, and the columns exist on the model.
-- Each monitor resolves a schedule.
-- The YAML parses. For model blocks, the key path is `config → meta → sidecar`.
+Keys valid and unique per model. `version: 1` present. References are `[[ this ]]` / `[[ ref() ]]` and columns exist. Each monitor resolves a schedule. YAML parses under `config → meta → sidecar`.
 
-After merging, the user syncs from Sidecar with **Observability → Monitors → Sync from dbt**. Model-block changes also need a production dbt run first. If the sync reports a blocked definition, the error code names the rule above that was broken.
+After merge the user runs **Observability → Monitors → Sync from dbt**; model blocks also need a production dbt run first. A blocked definition's error code names the rule above that was broken.
 ````
 
-## Keep it current
-
-The skill mirrors the [Monitors as code](/products/observability/monitors-as-code) reference. When that page changes, update your copy of the skill.
+Keep your copy in step with the [Monitors as code](/products/observability/monitors-as-code) reference.
