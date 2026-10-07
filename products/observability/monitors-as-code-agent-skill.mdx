@@ -4,13 +4,16 @@ description: "Teach Claude Code, Cursor, or Codex to write valid Sidecar monitor
 icon: "robot"
 ---
 
-Give your coding agent this skill so it writes Sidecar monitor definitions that pass the sync on the first try.
+Give your coding agent this skill so it writes Sidecar monitor definitions that follow the schema and the rules the sync enforces. Valid YAML can still be blocked at sync time for reasons outside the repository, such as a model with no catalogued table or an existing UI monitor that needs adoption, and the sync result tells you which.
 
 ## Install
 
 <Tabs>
   <Tab title="Claude Code">
     Save the file as `.claude/skills/monitors-as-code/SKILL.md` in your dbt repository. Claude Code loads it when a task mentions monitors; `/monitors-as-code` invokes it directly.
+  </Tab>
+  <Tab title="Codex">
+    Save the file as `.agents/skills/monitors-as-code/SKILL.md` in your dbt repository so Codex loads it on demand. As a fallback, paste the body into `AGENTS.md` under a **Sidecar monitors** heading.
   </Tab>
   <Tab title="Cursor">
     Save the file as `.cursor/rules/monitors-as-code.mdc`, replacing the frontmatter with:
@@ -22,9 +25,6 @@ Give your coding agent this skill so it writes Sidecar monitor definitions that 
     alwaysApply: false
     ---
     ```
-  </Tab>
-  <Tab title="Codex and others">
-    Paste the body into `AGENTS.md` under a **Sidecar monitors** heading.
   </Tab>
 </Tabs>
 
@@ -40,10 +40,19 @@ description: Write and edit Sidecar monitor definitions in a dbt project, in a m
 
 Sidecar creates monitors from definitions in the dbt project. Two locations, one schema:
 
-1. Model YAML under `config.meta.sidecar` (never top-level `meta`). Reaches Sidecar via the production dbt run.
-2. `sidecar/monitors.yml` at the repo root. Reaches Sidecar from Git on merge. Use it for many models at once or for package models whose YAML is not in the repo.
+1. Model YAML under `config.meta.sidecar` (never top-level `meta`). Sidecar sees changes after the production dbt run and its next catalog refresh.
+2. `sidecar/monitors.yml` at the repo root. Sidecar reads the default branch on its next sync, so merged changes are picked up without a dbt run. Use it for many models at once or for package models whose YAML is not in the repo.
 
-Identity is `<model>::<key>`. A new key is a new monitor; a new `name` is not. Never define the same key for a model in both locations.
+## Workflow
+
+1. Search both locations for existing definitions on the model (`grep -n sidecar models/ sidecar/monitors.yml`).
+2. Keep existing keys and all unrelated YAML untouched. Edit the block that already defines the monitor rather than adding a second one.
+3. Verify the model and column names against the model SQL or its YAML columns before writing SQL.
+4. Validate the result parses as YAML and sits under `config → meta → sidecar` for model blocks.
+
+## Identity
+
+A monitor is identified by `<model>::<key>`. Changing `name` keeps the monitor. Changing the key normally creates a new monitor and retires the old one, with one exception: Sidecar detects a rename when the new key is on the same model and, for volume and freshness, binds the same table, or, for custom, has unchanged resolved SQL and is the only candidate. Never define the same key for a model in both locations; both are blocked.
 
 ## Model block
 
@@ -90,7 +99,7 @@ Defaults apply file → entry → monitor. Use `unique_id` for ambiguous or pack
 
 ## Types
 
-**custom**: `sql` (required) is one SELECT returning the offending rows; Sidecar counts them. `fail_when` (required): `operator` in `gt gte lt lte eq neq`, integer `value`; fails when `count <operator> value`. Reference tables only as `[[ this ]]` or `[[ ref('model') ]]`; no `{{ }}`, no hard-coded names, no DDL/DML, no multiple statements, no trailing semicolon. Warehouse SQL dialect, no dbt macros. Referenced models must be in the warehouse the Sidecar source runs custom SQL on.
+**custom**: `sql` (required) is one SELECT returning the offending rows; Sidecar counts them. `fail_when` (required): `operator` in `gt gte lt lte eq neq`, integer `value`; fails when `count <operator> value`. Enforced: a single statement, no DDL or DML, no Jinja or dbt macros, warehouse SQL dialect, and any referenced model must be in the warehouse the Sidecar source runs custom SQL on. Recommended: reference tables as `[[ this ]]` or `[[ ref('model') ]]` rather than literal names, and omit the trailing semicolon.
 
 **volume**: `sensitivity` in `low medium high` (default `medium`). Model must be materialized as a table.
 
@@ -100,7 +109,12 @@ Defaults apply file → entry → monitor. Use `unique_id` for ambiguous or pack
 
 - `name`: display name; defaults to the key.
 - `schedule`: `{cron: "..."}` (15 min minimum), `{mode: interval, every_hours: 1|2|3|4|6|8|12, days_of_week: [...]}` (Monday = 0), or `{mode: specific_hours, hours: [...], days_of_week: [...]}`. Integers only; `true` and `1.0` are rejected. Every monitor needs a schedule from itself, its defaults, or the Sidecar source.
-- `notification_destinations`: `{type: slack, channel_id, channel_name}` or `{type: email, email}` on the company domain. Omit for source defaults.
+- `notification_destinations`: a list. Omit for source defaults.
+  ```yaml
+  notification_destinations:
+    - { type: slack, channel_id: C0123456789, channel_name: data-alerts }
+    - { type: email, email: data-team@yourcompany.com }   # company domain only
+  ```
 - `investigation_instructions`: short runbook for the Reliability agent on failure.
 
 No other fields. Unknown fields block the definition. There is no `enabled`; pausing happens in the Sidecar UI.
@@ -108,15 +122,14 @@ No other fields. Unknown fields block the definition. There is no `enabled`; pau
 ## Edits
 
 - Threshold, SQL, schedule, name: edit in place; history is kept.
-- Rename: change the key; Sidecar moves the monitor if its table (volume, freshness) or SQL (custom) is unchanged.
 - Remove: delete the block; the monitor is retired, runs are kept.
 - Type or table change: blocked. Delete and add under a new key.
 
 ## Checklist
 
-Keys valid and unique per model. `version: 1` present. References are `[[ this ]]` / `[[ ref() ]]` and columns exist. Each monitor resolves a schedule. YAML parses under `config → meta → sidecar`.
+Keys valid and unique per model. `version: 1` present. References are `[[ this ]]` / `[[ ref() ]]` and columns exist. Each monitor resolves a schedule. Destinations are a list. YAML parses.
 
-After merge the user runs **Observability → Monitors → Sync from dbt**; model blocks also need a production dbt run first. A blocked definition's error code names the rule above that was broken.
+After merge the user runs **Observability → Monitors → Sync from dbt**. A blocked definition's error code names the rule above that was broken; errors such as `table_not_found` or `adoption_required` come from the Sidecar side, not the YAML.
 ````
 
 Keep your copy in step with the [Monitors as code](/products/observability/monitors-as-code) reference.

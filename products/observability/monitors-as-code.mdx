@@ -9,7 +9,7 @@ Monitors as code lets you define Sidecar monitors next to the dbt models they pr
 You can define monitors in two places, and mix both in one project:
 
 - **In a model's YAML**, under `config.meta.sidecar`. The definition ships with the model and reaches Sidecar through your production dbt run.
-- **In one file per repository**, `sidecar/monitors.yml`. Sidecar reads it straight from your Git provider, so changes take effect as soon as they are merged.
+- **In one file per repository**, `sidecar/monitors.yml`. Sidecar reads it from your Git provider's default branch on each sync, so merged changes are picked up without a dbt run.
 
 ## Before you start
 
@@ -180,7 +180,7 @@ notification_destinations:
 After setup, Sidecar syncs automatically whenever it refreshes your dbt catalog. Use the button when you want a change applied right away.
 
 <Tip>
-  Repository file changes are visible to Sidecar as soon as they are merged. Model YAML changes need a production dbt run first, then Sidecar's next catalog refresh.
+  Repository file changes are picked up by the next sync after they are merged. Model YAML changes need a production dbt run first, then Sidecar's next catalog refresh.
 </Tip>
 
 ## How changes flow
