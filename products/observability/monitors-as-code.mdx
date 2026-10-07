@@ -1,0 +1,218 @@
+---
+title: Monitors as code
+description: "Define custom, volume, and freshness monitors in your dbt project and sync them into Sidecar"
+icon: "code-branch"
+---
+
+Monitors as code lets you define Sidecar monitors next to the dbt models they protect. The definitions live in your repository, go through your normal pull request review, and Sidecar creates and updates the monitors from them. Once synced, they look and behave like any other monitor.
+
+You can define monitors in two places, and mix both in one project:
+
+- **In a model's YAML**, under `config.meta.sidecar`. The definition ships with the model and reaches Sidecar through your production dbt run.
+- **In one file per repository**, `sidecar/monitors.yml`. Sidecar reads it from your Git provider's default branch on each sync, so merged changes are picked up without a dbt run.
+
+## Before you start
+
+- Connect [dbt Cloud](/integrations/transformation/dbt-cloud) or [dbt Core](/integrations/transformation/dbt-core). Sidecar reads monitor definitions from the dbt models it has already catalogued.
+- Connect the warehouse your models build into, for example [Snowflake](/integrations/data-warehouses/snowflake) or [BigQuery](/integrations/data-warehouses/bigquery). Volume and freshness monitors bind to the warehouse table behind each model.
+- To use the repository file, connect [GitHub](/integrations/source-control/github) or [GitLab](/integrations/source-control/gitlab) so Sidecar can read `sidecar/monitors.yml`.
+
+## Define monitors in a model's YAML
+
+Add a `sidecar` block under the model's `config.meta`. The keys under `monitors` are the monitors' identities, so pick stable names.
+
+```yaml models/marts/fct_orders.yml
+models:
+  - name: fct_orders
+    config:
+      meta:
+        sidecar:
+          version: 1
+          defaults:
+            schedule:
+              cron: "0 * * * *"
+          monitors:
+            orders_volume:
+              type: volume
+              name: Orders volume
+              sensitivity: medium
+            orders_freshness:
+              type: freshness
+              name: Orders freshness
+              freshness_mode: row_count_change
+              freshness_threshold:
+                hours: 6
+            orders_negative_revenue:
+              type: custom
+              name: Orders with negative revenue
+              sql: |
+                SELECT order_id
+                FROM [[ this ]]
+                WHERE net_revenue < 0
+              fail_when:
+                operator: gt
+                value: 0
+              investigation_instructions: |
+                Check recent pricing and refund changes before escalating.
+```
+
+Write the block under `config.meta`, not top-level `meta`. dbt carries it into the manifest and the Discovery API, which is where Sidecar reads it.
+
+## Define monitors in a repository file
+
+Create `sidecar/monitors.yml` at the root of the dbt repository. Each entry names a model and uses the same monitor schema as the model YAML.
+
+```yaml sidecar/monitors.yml
+version: 1
+defaults:
+  schedule:
+    cron: "0 */6 * * *"
+
+models:
+  - name: fct_orders
+    monitors:
+      orders_volume:
+        type: volume
+        sensitivity: high
+
+  - unique_id: model.my_project.dim_customers
+    defaults:
+      schedule:
+        cron: "30 2 * * *"
+    monitors:
+      customers_freshness:
+        type: freshness
+        freshness_threshold:
+          days: 1
+```
+
+Use `name` when the model name is unique in your project, or `unique_id` to be explicit. Defaults apply in this order: file defaults, then entry defaults, then the monitor's own fields.
+
+<Note>
+  A monitor is identified by its model and key. Moving a definition between the model YAML and the repository file keeps the monitor and its run history. Defining the same key for the same model in both places is a conflict, and both definitions are blocked until you remove one.
+</Note>
+
+## Monitor reference
+
+### Common fields
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `type` | Yes | `custom`, `volume`, or `freshness`. |
+| `name` | No | Display name. Defaults to the key. Renaming it keeps the monitor. |
+| `schedule` | No | Overrides the defaults. See [Schedules](#schedules). |
+| `notification_destinations` | No | Slack channels or email addresses on your company domain. |
+| `investigation_instructions` | No | Playbook text the Reliability agent uses when the monitor fails. |
+
+### Custom
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `sql` | Yes | A `SELECT` that returns the offending rows. Sidecar counts them. |
+| `fail_when` | Yes | `operator` (`gt`, `gte`, `lt`, `lte`, `eq`, `neq`) and an integer `value` compared against the row count. |
+
+Reference tables with `[[ this ]]` for the current model or `[[ ref('model_name') ]]` for another model. Sidecar resolves each to the fully qualified warehouse table. Jinja `{{ ref() }}` is not supported inside monitor SQL.
+
+### Volume
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `sensitivity` | No | `low`, `medium`, or `high`. Defaults to `medium`. |
+
+Volume monitors bind to the warehouse table behind the model. The model must be materialized as a table.
+
+### Freshness
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `freshness_mode` | No | `row_count_change` (default) or `last_updated`. `last_updated` uses the warehouse's own last-modified metadata and is not available on Redshift. |
+| `freshness_threshold` | Yes | `days` and `hours`. At least one must be greater than zero. |
+
+### Schedules
+
+```yaml
+schedule:
+  cron: "0 * * * *"
+```
+
+```yaml
+schedule:
+  mode: interval
+  every_hours: 6          # 1, 2, 3, 4, 6, 8, or 12
+  days_of_week: [0, 1, 2, 3, 4]   # Monday is 0
+```
+
+```yaml
+schedule:
+  mode: specific_hours
+  hours: [6, 18]
+  days_of_week: [0, 1, 2, 3, 4, 5, 6]
+```
+
+### Notification destinations
+
+```yaml
+notification_destinations:
+  - type: slack
+    channel_id: C0123456789
+    channel_name: data-alerts
+  - type: email
+    email: data-team@yourcompany.com
+```
+
+## Sync your monitors
+
+<Steps>
+  <Step title="Merge your definitions">
+    Open a pull request with the YAML changes and merge it. For model YAML, run your production dbt job afterward so the new metadata reaches Sidecar.
+  </Step>
+  <Step title="Click Sync from dbt">
+    In Sidecar, open **Observability → Monitors** and click **Sync from dbt**. The button is also on **Observability → Asset monitors**.
+  </Step>
+  <Step title="Complete the one-time setup">
+    The first time, a dialog asks for your dbt environment, the warehouse to run custom SQL on, and whether to read `sidecar/monitors.yml`. Confirm, and the first sync runs immediately.
+  </Step>
+  <Step title="Review the result">
+    A toast summarizes what changed, for example "Synced from dbt: 3 created, 1 unchanged". If any definition could not be applied, a panel lists it with the reason.
+  </Step>
+</Steps>
+
+After setup, Sidecar syncs automatically whenever it refreshes your dbt catalog. Use the button when you want a change applied right away.
+
+<Tip>
+  Repository file changes are picked up by the next sync after they are merged. Model YAML changes need a production dbt run first, then Sidecar's next catalog refresh.
+</Tip>
+
+## How changes flow
+
+| You | Sidecar |
+| --- | --- |
+| Change a threshold, SQL, schedule, or name | Updates the monitor in place and keeps its history. |
+| Rename a key | Moves the existing monitor to the new key. For custom monitors this requires the SQL to be unchanged. |
+| Remove a definition | Retires the monitor. Its past runs stay visible. |
+| Change a monitor's type or the table it points at | Blocked. Remove the definition and add it back under a new key. |
+| Pause, mute, or run a monitor from the UI | Preserved across syncs. |
+| Edit a synced monitor's definition from the UI | Rejected. Edit it in code and sync. |
+
+If a monitor already exists on a table from the UI when you add a volume or freshness definition for the same table, the sync pauses on it and offers **Adopt**. Adopting hands the existing monitor and its history over to the code definition.
+
+## Let your coding agent write them
+
+If you use Claude Code, Cursor, or Codex in your dbt repository, install the [agent skill for monitors as code](/products/observability/monitors-as-code-agent-skill). It teaches the agent the schema and the rules on this page so it produces valid definitions.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The sync says a definition is blocked">
+    The panel shows an error code and message for each blocked definition. Common codes: `table_not_found` when the model has no warehouse table in the catalog, `asset_not_eligible` when the model is a view, `unsupported_freshness_mode` for `last_updated` on Redshift, `warehouse_mismatch` when custom SQL references tables outside the warehouse chosen at setup, and `duplicate_key` when the same key is defined in both the model YAML and the repository file. Other definitions still apply.
+  </Accordion>
+  <Accordion title="My model YAML changes do not show up">
+    Sidecar reads model YAML from your production dbt run. Run the production job, wait for Sidecar's catalog refresh, then sync again. Make sure the block is under `config.meta.sidecar`.
+  </Accordion>
+  <Accordion title="The sync was skipped">
+    A skipped sync means Sidecar could not get a complete picture and changed nothing. The toast names the reason, for example `file_unreadable` when `sidecar/monitors.yml` is missing on the branch. If you removed the file on purpose, use **Stop reading sidecar/monitors.yml** in the panel.
+  </Accordion>
+  <Accordion title="A malformed definition kept my monitors alive">
+    When Sidecar cannot read a model's block or the repository file, it keeps the monitors that came from that source rather than guessing. Fix the YAML and sync again.
+  </Accordion>
+</AccordionGroup>
