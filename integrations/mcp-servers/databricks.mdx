@@ -1,109 +1,130 @@
 ---
 title: Databricks MCP
-description: "Connect a Databricks managed MCP server to Sidecar agents"
+description: "Use the managed Databricks SQL MCP connection with Sidecar agents"
 icon: "bolt"
 ---
 
-Native Databricks MCP setup in Sidecar is coming soon. Databricks managed MCP
-servers already use Streamable HTTP, so you can register one through Sidecar's
-custom connector with a service-principal personal access token (PAT).
+Sidecar creates a managed SQL MCP connection from your existing
+[Databricks integration](/integrations/data-warehouses/databricks). It uses the
+integration's OAuth service principal and derives this endpoint:
 
-<Note>
-  Databricks recommends OAuth for production. Sidecar's custom connector does
-  not yet perform OAuth token refresh, so this guide uses a service-principal
-  PAT. Set a short lifetime that fits your operating process and rotate it
-  before it expires.
-</Note>
-
-## Choose a managed server
-
-Databricks publishes these endpoint patterns:
-
-| Capability | Endpoint | Access behavior |
-|---|---|---|
-| Genie Agent | `https://<workspace-hostname>/api/2.0/mcp/genie/<space-id>` | Read-only natural-language analytics |
-| AI Search | `https://<workspace-hostname>/api/2.0/mcp/ai-search/<catalog>/<schema>/<index>` | Queries one search index |
-| Databricks SQL | `https://<workspace-hostname>/api/2.0/mcp/sql` | Can read and write |
-| Unity Catalog function | `https://<workspace-hostname>/api/2.0/mcp/functions/<catalog>/<schema>/<function>` | Runs a predefined function |
-
-See [Databricks managed MCP servers](https://docs.databricks.com/aws/en/agents/mcp/managed-mcp)
-for current endpoints, release stages, scopes, and resource permissions.
-
-Prefer a Genie Agent, AI Search index, or narrowly scoped Unity Catalog
-function when possible. The Databricks SQL server can modify data, and Sidecar
-applies MCP approval settings to the server as a whole rather than to individual
-tools.
-
-## Prepare the Databricks identity
-
-1. Create a Databricks service principal for Sidecar automation.
-2. Add it to the workspace.
-3. Grant it access to the selected MCP server and its underlying resource.
-4. For a SQL-backed resource, grant **Can use** on the SQL warehouse and only the required Unity Catalog privileges.
-
-If you also connect Databricks as a Sidecar warehouse integration, follow the
-[Databricks integration guide](/integrations/data-warehouses/databricks) for the
-base service principal and Unity Catalog grants.
-
-## Create a service-principal PAT
-
-A workspace admin can create a PAT on behalf of the service principal. Replace
-the application ID and choose a lifetime that matches your rotation policy. This
-example uses 90 days:
-
-```bash
-databricks token-management create-obo-token <service-principal-application-id> \
-  --comment "Sidecar Agent Console MCP" \
-  --lifetime-seconds 7776000
+```text
+https://<workspace-hostname>/api/2.0/mcp/sql
 ```
 
-Copy the returned token value. See Databricks' [service-principal token
-management](https://docs.databricks.com/aws/en/admin/users-groups/manage-service-principals#manage-tokens-for-a-service-principal)
-and [`create-obo-token` CLI reference](https://docs.databricks.com/aws/en/dev-tools/cli/reference/token-management-commands#databricks-token-management-create-obo-token).
-
-## Register the server in Sidecar
-
-Register each Databricks endpoint as a separate MCP server.
-
-1. In Sidecar, select **Integrations → MCP Servers**.
-2. Click **Add MCP**, then select **Custom server**.
-3. Enter values like these for a Genie Agent:
-
-| Field | Example |
-|---|---|
-| **Display name** | `Databricks Genie — Finance` |
-| **Name** | `databricks_genie_finance` |
-| **Server URL** | `https://dbc-a1b2c3d4.cloud.databricks.com/api/2.0/mcp/genie/01ef...` |
-| **Bearer token** | The service-principal PAT |
-
-4. Click **Add server**.
-5. Confirm that the server status is **Connected** and review the discovered tools.
-
-The hostname must be your workspace hostname, not the account-console hostname
-or a SQL warehouse HTTP path. Databricks documents the bearer header and client
-setup in [Connect MCPs to AI assistants and coding
-agents](https://docs.databricks.com/aws/en/agents/mcp/connect-clients#connect-clients-using-personal-access-token-pat-authentication).
-
-<Frame caption="Register the exact managed-server endpoint as a custom MCP server.">
-  <img
-    src="/images/integrations/mcp-servers/databricks-form.png"
-    alt="Custom MCP server form populated with a Databricks managed MCP endpoint"
-  />
-</Frame>
-
-Continue by [granting the server to an agent and selecting it for
-jobs](/products/agent-console/setup/give-agents-mcp-access).
-
-## Operate the connection
-
-- Replace the token in Sidecar before the PAT expires.
-- Use one service principal per security boundary when different agents need different access.
-- Add Sidecar's outbound addresses to Databricks workspace IP access lists when your workspace restricts clients.
-- Test the exact endpoint and PAT with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) when tool discovery fails.
+Sidecar manages short-lived access tokens and OAuth renewal for Agent Console.
+You do not enter a separate MCP URL or PAT. Update the service-principal OAuth
+credentials through the Databricks integration.
 
 <Warning>
-  Databricks-hosted custom MCP servers do not support PAT authentication. The
-  direct PAT setup above applies to Databricks managed MCP servers and MCP
-  Services. Put a compatible bearer-authenticated gateway in front of a custom
-  Databricks-hosted server before registering it in Sidecar.
+  The managed SQL MCP can execute writes allowed by the service principal.
+  Restrict its Unity Catalog and warehouse permissions to the access agents
+  need. [MCP approval
+  settings](/products/agent-console/setup/give-agents-mcp-access#configure-approvals-for-an-mcp-server)
+  apply to the entire server.
 </Warning>
+
+## Prerequisites
+
+- Account Admin permissions in Sidecar
+- A connected [Databricks integration](/integrations/data-warehouses/databricks)
+  with a workspace host, OAuth client ID, and client secret
+- The service principal assigned to the workspace with Databricks SQL access
+- Permission to use the managed SQL MCP and an eligible SQL warehouse
+- Unity Catalog `USE CATALOG`, `USE SCHEMA`, and `SELECT` grants on the data agents
+  should read
+
+The workspace host must be the workspace hostname, not the account-console
+hostname. Follow the integration guide for the service principal and base grants.
+Consult [Databricks MCP
+documentation](https://docs.databricks.com/aws/en/agents/mcp/managed-mcp) for
+workspace availability and provider permissions.
+
+## Configure network access
+
+Sidecar's provisioning and health checks connect from `44.236.246.98/32`.
+Agent Console connects directly from Anthropic, whose outbound IPv4 range is
+currently `160.79.104.0/21`. Allow both in any Databricks workspace IP access list
+that applies to the service principal.
+
+Confirm [Anthropic's current outbound
+addresses](https://platform.claude.com/docs/en/api/ip-addresses#outbound-ip-addresses)
+before configuring access. A SQL warehouse connection test from Sidecar does
+not establish runtime MCP access from Anthropic.
+
+## Confirm the managed connection
+
+1. In **Integrations → Databricks → Connection**, save the integration's OAuth
+   credentials.
+2. Open the **MCP** tab. Sidecar normally creates the managed SQL MCP within
+   two minutes.
+3. Review the status and discovered tools. If **Setup is taking longer than
+   expected** appears, click **Check again**.
+4. Open **Integrations → MCP Servers** and confirm the **Databricks** row.
+5. [Confirm the agent grant and job
+   selection](/products/agent-console/setup/give-agents-mcp-access).
+
+<Note>
+  The managed MCP selects its SQL warehouse automatically. That warehouse can
+  differ from the **HTTP Path** used by the warehouse integration. Check the
+  warehouse used by the MCP when investigating permission errors.
+</Note>
+
+Do not replace the native managed credential with a PAT. Use the integration's
+**Connection** tab to change its OAuth credentials or workspace host.
+Authenticated **Check now** checks discover tools with the service-principal
+identity; they do not verify every table's permissions.
+
+## Verify Agent Console access
+
+Start a new manual run after confirming the grant and job selection. Ask the
+agent to use the Databricks MCP server for these read operations:
+
+```text
+Use the Databricks MCP server's SQL query tool.
+Run SELECT current_user() AS user_name, current_catalog() AS catalog_name,
+current_schema() AS schema_name;
+Then run SELECT * FROM <CATALOG>.<SCHEMA>.<TABLE> LIMIT 1;
+Report the actual tool results and any authentication or access error.
+Do not change data, files, or repositories.
+```
+
+Replace the table placeholders with an existing table the service principal
+may read. In the run transcript, confirm successful MCP tool calls and the
+expected identity and data scope. Complete any required approval. An empty
+table can return zero rows successfully. See [runtime
+verification](/products/agent-console/setup/give-agents-mcp-access#verify-a-tool-call-in-agent-console).
+
+## Additional custom endpoints
+
+For another Databricks MCP capability, use the exact endpoint and permissions
+from the provider's documentation. You can register it as a [custom
+server](/integrations/mcp-servers/connect-an-mcp-server) only if it accepts the
+custom connector's static bearer authentication and Streamable HTTP transport.
+
+The custom connector does not perform OAuth refresh. If the endpoint requires
+OAuth, use a supported native connector or a compatible gateway. Follow the
+provider's authentication requirements rather than assuming a PAT works for
+every Databricks-hosted MCP endpoint.
+
+## Troubleshooting
+
+<Accordion title="The managed server does not appear">
+  Save the OAuth Databricks integration and allow up to two minutes for setup.
+  Click **Check again** on the MCP tab if setup is taking longer than expected.
+  Contact support if the row remains missing; include the integration name and
+  setup timestamp, without credentials.
+</Accordion>
+
+<Accordion title="The server shows Auth error">
+  Read the status detail. Check service-principal assignment, OAuth credential
+  validity, managed SQL MCP permissions, and SQL warehouse access. Update
+  credentials on the **Connection** tab and select **Check now** after correcting
+  permissions.
+</Accordion>
+
+<Accordion title="Connected in Sidecar, but the agent cannot query">
+  Confirm the grant and job selection, then start a new run. Check workspace
+  access rules for Anthropic's outbound addresses, the warehouse selected by
+  MCP, and Unity Catalog permissions on the exact table.
+</Accordion>

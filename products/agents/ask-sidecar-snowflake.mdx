@@ -15,6 +15,14 @@ The setup has two parts:
 1. **Admin (once per org):** Create the MCP Server object in Snowflake and verify it in Sidecar. This makes query execution available to your organization.
 2. **Each user:** Connect a personal Snowflake Programmatic Access Token (PAT). Queries run under each user's own Snowflake identity, so existing role-based access controls are respected.
 
+<Note>
+  This guide configures personal Ask Sidecar query access through Sidecar's
+  proxy. Agent Console uses the same Snowflake MCP object with a service-user
+  PAT and connects directly from Anthropic. Follow [Snowflake MCP for Agent
+  Console](/integrations/mcp-servers/snowflake) for its additional network rules,
+  role setup, and runtime verification.
+</Note>
+
 ## Prerequisites
 
 To complete the admin steps you need:
@@ -84,6 +92,9 @@ This SQL does three things:
 Back in Sidecar, click **Verify MCP Server**. Sidecar connects to your warehouse and runs `DESCRIBE MCP SERVER` to confirm the object exists.
 
 Once verified, a green checkmark appears and the per-user token setup section becomes available for all users in your organization.
+
+This check confirms that the object exists using the warehouse integration's
+identity. It does not validate a personal PAT or Agent Console runtime access.
 
 ### 5. Allow Sidecar through your network policy
 

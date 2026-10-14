@@ -24,10 +24,10 @@ You must be an Account Admin to manage MCP servers.
     Use Sidecar's native Snowflake MCP setup.
   </Card>
   <Card title="BigQuery MCP" icon="google" href="/integrations/mcp-servers/bigquery">
-    Use Google's managed BigQuery and Cloud Logging MCP servers natively.
+    Use Google's managed BigQuery MCP server with your integration identity.
   </Card>
   <Card title="Databricks MCP" icon="bolt" href="/integrations/mcp-servers/databricks">
-    Register a Databricks managed MCP server.
+    Use the managed SQL MCP server from your Databricks integration.
   </Card>
   <Card title="Redshift MCP" icon="aws" href="/integrations/mcp-servers/redshift">
     Host or bridge a Redshift MCP server for Sidecar.
@@ -39,7 +39,7 @@ You must be an Account Admin to manage MCP servers.
 Sidecar's custom connector expects the exact MCP endpoint URL to:
 
 - Support the MCP Streamable HTTP transport
-- Be reachable from Sidecar's infrastructure
+- Be reachable from both Sidecar's infrastructure and Anthropic's Agent Console runtime
 - Accept a static token in the `Authorization: Bearer <token>` header
 - Support MCP initialization and `tools/list`
 - Respond to connection checks within 30 seconds
@@ -47,6 +47,29 @@ Sidecar's custom connector expects the exact MCP endpoint URL to:
 Use HTTPS for every production endpoint. A local `stdio` command, an SSE-only
 URL, or a server that requires an interactive OAuth flow cannot be registered
 directly.
+
+## Configure network access
+
+For a direct MCP endpoint, allow both clients through its firewall, IP access
+list, and authentication policy:
+
+| Client | Purpose | Outbound IPv4 source |
+| --- | --- | --- |
+| Sidecar | Registration, authenticated discovery, and health checks | `44.236.246.98/32` |
+| Anthropic | Agent Console MCP initialization and tool calls | Currently `160.79.104.0/21` |
+
+Check [Anthropic's current outbound
+addresses](https://platform.claude.com/docs/en/api/ip-addresses#outbound-ip-addresses)
+before configuring access. A local MCP Inspector test or a Sidecar connection
+test does not prove that Anthropic can reach the endpoint.
+
+Native Snowflake, BigQuery, and Databricks MCP connections go directly from
+Anthropic to the provider. Native dbt Cloud MCP goes through Sidecar's proxy;
+Sidecar makes the upstream dbt Cloud requests. A hosted Redshift gateway needs
+access from both clients, while the gateway's own identity and network govern
+its access to Redshift.
+
+Follow the provider-specific guide for network-policy and credential details.
 
 ## Add a server
 
@@ -70,7 +93,7 @@ Choose a setup method.
     - **Display name** — the label people see in Sidecar
     - **Name** — a stable machine-readable name
     - **Server URL** — the full Streamable HTTP MCP endpoint
-    - **Bearer token** — the workspace credential Sidecar sends to the server
+    - **Bearer token** — the workspace credential used for Sidecar discovery and Agent Console runtime access
 
     Click **Add server**.
 
@@ -97,20 +120,29 @@ Choose a setup method.
   </Tab>
 </Tabs>
 
-BigQuery, Databricks, and Redshift appear as coming soon for native MCP setup.
-You can still register a compatible endpoint as a custom server. Follow the
-warehouse-specific guides above for supported endpoints and authentication
-constraints.
+Native [BigQuery](/integrations/mcp-servers/bigquery) and
+[Databricks](/integrations/mcp-servers/databricks) MCP servers are managed from
+their warehouse integrations. You do not register them with a separate bearer
+token. Use the integration page even if BigQuery appears as coming soon in the
+**Add MCP** dialog.
+
+Redshift uses the hosted custom-endpoint workflow. Follow its guide for gateway
+and database access.
 
 ## What happens when you save
 
-Sidecar stores the token as a write-only workspace credential, probes the endpoint, and requests its tool list. The token is never displayed again.
+For custom, Snowflake, and dbt Cloud setup, Sidecar validates the supplied
+token with authenticated MCP discovery before registration. It stores the
+token as a write-only workspace credential. The token is never displayed again.
+If registration fails, resolve the reported error and retry.
 
-The server row is saved even when the initial probe reports an authentication or reachability warning. Resolve the warning before depending on the server in a job.
+Native BigQuery and Databricks use managed OAuth credentials from their linked
+integrations. Sidecar handles access-token renewal. Check the registered row's
+status and tool catalog, then verify a tool call in a new Agent Console run.
 
 ## Manage a server
 
-Use the server row actions to:
+For servers with a static bearer credential, use the row actions to:
 
 - **Check now** — check endpoint reachability without retrieving the stored credential
 - **Refresh tools** — re-enter the token and request the tool list again
@@ -119,12 +151,23 @@ Use the server row actions to:
 - **Delete** — remove the server from the workspace
 
 <Note>
-  **Check now** confirms reachability. Because Sidecar cannot read the stored
-  token back, this check does not prove that the credential is valid. Use
-  **Refresh tools** to test with a token.
+  For static-token connections, **Check now** performs an unauthenticated
+  endpoint check. It does not validate the stored token, prove Anthropic's
+  access, or establish permission to query data. A Connected badge can retain
+  an earlier authenticated result after a runtime authentication failure.
+  Re-enter the token with **Refresh tools** to test discovery from Sidecar,
+  then verify a tool call in Agent Console.
 </Note>
 
-Changing a custom server URL requires you to re-enter its bearer token. URLs derived from Snowflake or dbt Cloud are not editable.
+Native BigQuery and Databricks **Check now** actions use the linked integration
+identity for authenticated checks. Their credentials are managed on the
+warehouse integration's **Connection** tab; manual MCP token replacement is
+unavailable. Even an authenticated discovery check does not prove access to
+every table or tool operation.
+
+Changing a custom server URL requires you to re-enter its bearer token.
+Native server URLs are managed by their linked integrations and are not editable
+on the MCP server row.
 
 <Warning>
   Deleting a server removes its agent grants, job selections, and
@@ -133,4 +176,7 @@ Changing a custom server URL requires you to re-enter its bearer token. URLs der
 
 ## Give an agent access
 
-Registration does not grant the server to any agent. Continue with [Give agents MCP access](/products/agent-console/setup/give-agents-mcp-access).
+Confirm the server is granted to the intended agent and selected for the job.
+Continue with [Give agents MCP
+access](/products/agent-console/setup/give-agents-mcp-access), including its
+runtime verification steps.
