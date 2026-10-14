@@ -46,6 +46,12 @@ By default, a job uses all MCP servers currently granted to its agent. This incl
   />
 </Frame>
 
+<Note>
+  Grant and job-selection changes apply to newly created runs. Start a new run
+  after changing them. An existing conversation keeps the MCP access captured
+  when it started, even if you reply after editing the agent or job.
+</Note>
+
 ## Configure approvals for an MCP server
 
 MCP permissions apply to the entire server rather than individual discovered tools.
@@ -56,6 +62,52 @@ Under **Tool permissions**:
 - **Supervised** pauses gateable tools for Account Admin approval. Add an MCP server as an exception when that server may run automatically.
 
 Core repository tools remain available in either mode. See [Runs and approvals](/products/agent-console/jobs/runs-and-approvals#approvals) for the approval flow.
+
+## Verify a tool call in Agent Console
+
+Use an agent whose other setup requirements are complete. To create a manual
+verification job:
+
+1. Open the agent and click **New job**.
+2. Name it **MCP connection check**.
+3. Enter instructions for one read operation using the selected MCP server.
+   Name the server, operation, and resource explicitly. Use the provider guide's
+   example when available.
+4. Choose **Text response in Agent Console** for delivery when available and
+   **Manual** for the trigger. Click **Create job**.
+5. In **MCP servers**, enable the server you are testing.
+6. Review **Tool permissions**, make the job active, and click **Run now**.
+7. Complete any approval required for the read operation.
+8. Open the run transcript and expand the MCP tool call. Confirm that the tool
+   returns a successful result from the intended resource and identity.
+
+For Snowflake, follow the [identity and table-query
+check](/integrations/mcp-servers/snowflake#verify-agent-console-access).
+An empty result can be successful; an authentication or access error is not.
+An agent's written assurance without a successful tool result is not a
+connection test.
+
+Delete a disposable verification job after the test.
+
+## Troubleshoot missing MCP tools
+
+If the agent says the MCP server is unavailable:
+
+1. Confirm the server appears in **Integrations → MCP Servers**.
+2. Confirm it is selected under the agent's **Settings → Scope → Connected tools**.
+3. Confirm it is enabled in the job's **MCP servers** selection.
+4. Start a new run after correcting the grant or job selection.
+5. Check the provider guide's network and credential requirements. Direct
+   endpoints must allow both [Sidecar and
+   Anthropic](/integrations/mcp-servers/connect-an-mcp-server#configure-network-access).
+
+A server can be registered but fail authentication during runtime
+initialization. In that case its tools are unavailable to the agent, which may
+describe the problem as missing provisioning. A Connected badge can retain an
+earlier result. Use the run's tool results and errors to confirm runtime access.
+
+If the issue persists, send support the Sidecar run URL, timestamp and time
+zone, MCP server name, and sanitized error. Keep credentials out of the message.
 
 ## Slack runs
 

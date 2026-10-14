@@ -38,7 +38,7 @@ grant role SIDECAR_ROLE to user SIDECAR_USER;
 alter user SIDECAR_USER set default_role = SIDECAR_ROLE;
 alter user SIDECAR_USER set type = service;
 alter user SIDECAR_USER set password = 'strong_password_here';
-set default_warehouse = '<warehouse>'; -- existing or SIDECAR_WH
+alter user SIDECAR_USER set default_warehouse = '<warehouse>'; -- existing or SIDECAR_WH
 
 -- So that any SYSADMIN user can use the Sidecar tables
 grant role SIDECAR_ROLE to role SYSADMIN;
@@ -47,7 +47,7 @@ grant role SIDECAR_ROLE to role SYSADMIN;
 create database if not exists SIDECAR_DATABASE;
 
 -- Grant Sidecar role access to Sidecar warehouse
-grant all on warehouse SIDECAR_DATABASE to role SIDECAR_ROLE;
+grant all on warehouse <warehouse> to role SIDECAR_ROLE; -- existing or SIDECAR_WH
 
 -- Grant Sidecar access to Sidecar database
 grant all on database SIDECAR_DATABASE to role SIDECAR_ROLE;

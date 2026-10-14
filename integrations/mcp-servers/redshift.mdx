@@ -33,6 +33,19 @@ requirements](/integrations/mcp-servers/connect-an-mcp-server#requirements-for-a
   field authenticates Sidecar to your MCP gateway, not the gateway to AWS.
 </Warning>
 
+## Configure gateway network access
+
+Sidecar's registration and health checks reach your hosted MCP gateway from
+`44.236.246.98/32`. Agent Console calls the same gateway from Anthropic's
+infrastructure. Permit both sources at the gateway's firewall and
+authentication layer. Use the [current outbound
+addresses](/integrations/mcp-servers/connect-an-mcp-server#configure-network-access).
+
+The gateway connects onward to AWS and Redshift with its own workload identity
+and network. Allowing Anthropic at the gateway does not grant it direct access
+to your Redshift database. A successful local or Sidecar discovery check does
+not prove that the runtime can reach the gateway.
+
 ## Configure AWS access
 
 Attach a dedicated IAM role to the hosted MCP workload. The AWS Labs server
@@ -128,12 +141,32 @@ Sidecar must be the hosted Streamable HTTP URL, not this command.
 Continue by [granting the server to an agent and selecting it for
 jobs](/products/agent-console/setup/give-agents-mcp-access).
 
+## Verify Agent Console access
+
+After granting the hosted server and enabling it for a job, start a new manual
+run. Ask the agent to use the Redshift MCP query tool for `SELECT 1` and a
+`SELECT` from one permitted table with `LIMIT 1`. Supply the exact cluster or
+workgroup, database, schema, and table.
+
+Expand the MCP calls in the run transcript. Confirm successful query results
+from the intended database, and complete any required approval. An empty table
+can return zero rows successfully. See [runtime
+verification](/products/agent-console/setup/give-agents-mcp-access#verify-a-tool-call-in-agent-console).
+
 ## Troubleshooting
 
 <Accordion title="Sidecar reports the server as unreachable">
   Confirm that you registered the public or privately routable HTTPS `/mcp`
   endpoint. A local `uvx` command or `localhost` URL is not reachable from
   Sidecar. Check the gateway's TLS certificate, firewall, and request timeout.
+</Accordion>
+
+<Accordion title="Connected in Sidecar, but the agent has no Redshift tools">
+  Confirm the agent grant and job selection, then start a new run. Check that
+  the gateway permits Anthropic's outbound requests and accepts the stored
+  bearer credential. A Connected badge can retain an earlier Sidecar result.
+  Send support the run URL, timestamp and time zone, and sanitized gateway
+  error if initialization still fails.
 </Accordion>
 
 <Accordion title="The server connects but cannot find clusters">

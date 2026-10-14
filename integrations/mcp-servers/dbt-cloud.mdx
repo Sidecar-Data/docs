@@ -21,6 +21,18 @@ You need:
 The MCP token is shared by agent runs that have access to this server. Use an
 organization-wide service account token.
 
+## Network access
+
+Agent Console connects to Sidecar's dbt Cloud MCP proxy. The proxy sends
+requests to your dbt Cloud **Access URL** and supplies the production environment
+header. Upstream requests originate from Sidecar's production outbound IP,
+`44.236.246.98/32`.
+
+If your dbt Cloud deployment restricts inbound access, allow Sidecar's upstream
+requests. Anthropic connects to the Sidecar proxy rather than directly to dbt
+Cloud. For a custom direct endpoint, follow the [two-client network
+requirements](/integrations/mcp-servers/connect-an-mcp-server#configure-network-access).
+
 ## Enable dbt Cloud MCP in Sidecar
 
 1. In Sidecar, open **Integrations → dbt Cloud**.
@@ -70,6 +82,19 @@ repository](/products/agent-console/setup/connect-repositories).
 To rotate credentials or refresh tools, use the row actions in
 **Integrations → MCP Servers**. See [Manage a server](/integrations/mcp-servers/connect-an-mcp-server#manage-a-server).
 
+## Verify Agent Console access
+
+After granting the server and selecting it for a job, start a new manual run.
+Ask the agent to use the dbt Cloud MCP server to inspect the status and error
+details of an existing job run the service token can access. Provide the run ID
+and project name or ID. Ask it to report the actual tool result without retrying
+or triggering a job.
+
+Expand the MCP call in the run transcript and confirm that it returns the
+intended job run's details. A Connected badge alone does not establish runtime
+access. See [runtime
+verification](/products/agent-console/setup/give-agents-mcp-access#verify-a-tool-call-in-agent-console).
+
 ## Troubleshooting
 
 <Accordion title="Enable MCP is unavailable">
@@ -90,7 +115,9 @@ To rotate credentials or refresh tools, use the row actions in
 </Accordion>
 
 <Accordion title="The agent cannot see dbt Cloud tools">
-  Confirm that the server is connected, granted to the agent, and enabled for
-  the job. For native dbt Firefighter jobs, the server must belong to the dbt
-  Cloud integration used by the job.
+  Confirm that the server is granted to the agent and enabled for the job,
+  then start a new run. Check the service token and Sidecar's upstream network
+  access if initialization fails. A Connected badge can retain an earlier
+  authenticated result. For native dbt Firefighter jobs, the server must belong
+  to the dbt Cloud integration used by the job.
 </Accordion>

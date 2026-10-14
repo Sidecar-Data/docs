@@ -4,14 +4,20 @@ description: "Give Sidecar agents read-only query access through a Snowflake-man
 icon: "snowflake"
 ---
 
-Sidecar provides native setup for Snowflake MCP. The Agent Console reuses the
-Snowflake-managed MCP server created for Ask Sidecar, but it authenticates with
-an organization-wide service-user token.
+Enable Snowflake MCP to let Agent Console agents query the data your Snowflake
+service user can read. Setup is complete when a new Agent Console run executes
+a Snowflake MCP query successfully.
+
+The Agent Console reuses the Snowflake-managed MCP server created during
+[Ask Sidecar admin setup](/products/agents/ask-sidecar-snowflake#admin-setup).
+It connects directly from Anthropic's infrastructure with an organization-wide
+service-user PAT. Ask Sidecar uses personal PATs and connects through Sidecar's
+proxy.
 
 <Info>
   A personal PAT on the **Ask Sidecar** tab applies only to that person. The PAT
-  on the **MCP** tab is shared by Agent Console jobs. Use a service user for the
-  Agent Console credential.
+  on the **MCP** tab is shared by Agent Console runs that have access to the
+  server. Use a service user for the Agent Console credential.
 </Info>
 
 ## Before you start
@@ -21,101 +27,152 @@ You need:
 - Account Admin permissions in Sidecar
 - A connected [Snowflake integration](/integrations/data-warehouses/snowflake)
 - A verified Snowflake MCP server, following the admin steps in [Ask Sidecar with Snowflake query execution](/products/agents/ask-sidecar-snowflake#admin-setup)
-- A Snowflake service user whose role can query only the warehouses, databases, and schemas agents need
+- A Snowflake administrator who can configure the service user, role grants, and network policy
+- An Agent Console agent with its other setup requirements complete
 
-The Sidecar setup creates `SIDECARMCPSERVER` in the `PUBLIC` schema of your
-selected Sidecar database. It exposes one `executesql` tool with Snowflake's
-`read_only` option enabled. See Snowflake's
-[CREATE MCP SERVER reference](https://docs.snowflake.com/en/sql-reference/sql/create-mcp-server)
-for the underlying object and tool specification.
+Sidecar's setup creates `SIDECARMCPSERVER` in the `PUBLIC` schema of your selected
+Sidecar database. It exposes one `executesql` tool with Snowflake's `read_only`
+option enabled. See Snowflake's [MCP server guide](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp).
+
+## Prepare the service user and role
+
+You can reuse `SIDECAR_USER` from the [Snowflake integration
+setup](/integrations/data-warehouses/snowflake#2-create-a-user-role-and-database-for-sidecar).
+You can also use a separate service user and role with narrower data access.
+Create that user and role before running the examples below.
+
+The examples below use `SIDECAR_USER` and `SIDECAR_ROLE`. Replace both names if
+you use a separate identity. Replace `<WAREHOUSE>` with the warehouse agents
+should use, and `<MCP_DATABASE>` with the database that contains `SIDECARMCPSERVER`.
+
+```sql
+USE ROLE ACCOUNTADMIN;
+
+GRANT ROLE SIDECAR_ROLE TO USER SIDECAR_USER;
+ALTER USER SIDECAR_USER
+  SET TYPE = SERVICE
+      DEFAULT_ROLE = SIDECAR_ROLE
+      DEFAULT_WAREHOUSE = '<WAREHOUSE>';
+
+GRANT USAGE ON WAREHOUSE <WAREHOUSE> TO ROLE SIDECAR_ROLE;
+GRANT USAGE ON DATABASE <MCP_DATABASE> TO ROLE SIDECAR_ROLE;
+GRANT USAGE ON SCHEMA <MCP_DATABASE>.PUBLIC TO ROLE SIDECAR_ROLE;
+GRANT USAGE ON MCP SERVER <MCP_DATABASE>.PUBLIC.SIDECARMCPSERVER
+  TO ROLE SIDECAR_ROLE;
+```
+
+Grant the role access to each database, schema, and table agents should query.
+Replace the placeholders with your approved data scope:
+
+```sql
+GRANT USAGE ON DATABASE <DATA_DATABASE> TO ROLE SIDECAR_ROLE;
+GRANT USAGE ON SCHEMA <DATA_DATABASE>.<DATA_SCHEMA> TO ROLE SIDECAR_ROLE;
+GRANT SELECT ON TABLE <DATA_DATABASE>.<DATA_SCHEMA>.<DATA_TABLE>
+  TO ROLE SIDECAR_ROLE;
+```
+
+For a view, use `GRANT SELECT ON VIEW` instead. The PAT's restricted role needs
+these grants even if a different role can query the data in Snowsight. A default
+warehouse and tool discovery do not grant table access.
 
 ## Configure network access
 
-Snowflake requires service users who authenticate with Programmatic Access
-Tokens to be subject to a network policy with at least one network rule by
-default. Sidecar sends Snowflake MCP requests from this production outbound IP
-address:
+Snowflake requires service users using PATs to be subject to a network policy
+with network rules by default. Allow both sources in the effective policy:
 
-```text
-44.236.246.98/32
-```
+| Connection | Outbound source to allow |
+| --- | --- |
+| Sidecar registration, tool discovery, and connection checks → Snowflake | `44.236.246.98/32` |
+| Agent Console runtime → Snowflake | Anthropic's outbound IPv4 range, currently `160.79.104.0/21` |
 
-Check whether a user-level or account-level network policy applies to the
-service user. A user-level policy overrides an account-level policy.
+Check [Anthropic's outbound address
+documentation](https://platform.claude.com/docs/en/api/ip-addresses#outbound-ip-addresses)
+before applying the rule. Snowflake's [MCP network
+guidance](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp#network-policies-for-mcp-clients)
+explains why remote MCP requests originate from the client provider.
+
+<Note>
+  A successful Sidecar connection test does not confirm that Agent Console can
+  connect. Allowing only Sidecar's IP can leave registration working while the
+  agent has no usable Snowflake tools.
+</Note>
+
+Identify the service user's effective policy. A user-level policy overrides an
+account-level policy:
 
 ```sql
 SHOW PARAMETERS LIKE 'NETWORK_POLICY' FOR USER SIDECAR_USER;
 SHOW PARAMETERS LIKE 'NETWORK_POLICY' IN ACCOUNT;
 ```
 
-If a policy applies, inspect whether it uses network rules or the legacy IP
-allowlist:
+If a policy is already assigned, inspect it:
 
 ```sql
 DESCRIBE NETWORK POLICY <POLICY_NAME>;
 ```
 
-For a rule-based or new policy, create a network rule for Sidecar in the database
-that contains `SIDECARMCPSERVER`:
+For a rule-based or new policy, create these rules in the MCP database. Reuse a
+rule if it already exists and contains the required addresses:
 
 ```sql
 USE ROLE ACCOUNTADMIN;
 
-CREATE NETWORK RULE <DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS
+CREATE NETWORK RULE <MCP_DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS
   MODE = INGRESS
   TYPE = IPV4
   VALUE_LIST = ('44.236.246.98/32')
   COMMENT = 'Sidecar production outbound IP for Snowflake MCP';
+
+CREATE NETWORK RULE <MCP_DATABASE>.PUBLIC.ANTHROPIC_MCP_INGRESS
+  MODE = INGRESS
+  TYPE = IPV4
+  VALUE_LIST = ('160.79.104.0/21')
+  COMMENT = 'Anthropic outbound IP range for Agent Console Snowflake MCP';
 ```
 
-<Note>
-  If you created `SIDECAR_MCP_INGRESS` during Ask Sidecar setup, reuse it and
-  skip the `CREATE NETWORK RULE` statement.
-</Note>
-
-Add the rule to an existing rule-based policy without replacing its other
-rules:
+Add both rules to the existing rule-based policy without replacing its other
+rules. Omit a rule from this statement if it is already in the policy:
 
 ```sql
 ALTER NETWORK POLICY <POLICY_NAME>
-  ADD ALLOWED_NETWORK_RULE_LIST =
-    ('<DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS');
+  ADD ALLOWED_NETWORK_RULE_LIST = (
+    '<MCP_DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS',
+    '<MCP_DATABASE>.PUBLIC.ANTHROPIC_MCP_INGRESS'
+  );
 ```
 
-If `DESCRIBE NETWORK POLICY` shows `ALLOWED_IP_LIST` instead of
-`ALLOWED_NETWORK_RULE_LIST`, do not add the Sidecar rule to that legacy policy.
-Snowflake requires network rules for PAT access and recommends against mixing
-legacy IP lists with network rules. Create a rule-based user policy that
-reproduces every restriction the service user needs, then add the Sidecar rule
-and attach the new policy.
-
-If no rule-based policy applies, create a dedicated policy and attach it to the
-service user:
+If no policy applies, create a dedicated service-user policy and attach it:
 
 ```sql
 CREATE NETWORK POLICY SIDECAR_AGENT_CONSOLE_NETWORK_POLICY
-  ALLOWED_NETWORK_RULE_LIST =
-    ('<DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS');
+  ALLOWED_NETWORK_RULE_LIST = (
+    '<MCP_DATABASE>.PUBLIC.SIDECAR_MCP_INGRESS',
+    '<MCP_DATABASE>.PUBLIC.ANTHROPIC_MCP_INGRESS'
+  );
 
 ALTER USER SIDECAR_USER
   SET NETWORK_POLICY = SIDECAR_AGENT_CONSOLE_NETWORK_POLICY;
 ```
 
-If you use a different service user, replace `SIDECAR_USER` with its name. See
-Snowflake's [programmatic access token guide](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens#network-policy-requirements)
-and [network policy guidance](https://docs.snowflake.com/en/user-guide/network-policies).
+<Warning>
+  Preserve the allowed and blocked rules your organization requires. If you
+  replace a legacy `ALLOWED_IP_LIST` policy with a rule-based user policy,
+  reproduce its restrictions before attaching the new policy. A user policy
+  overrides the account policy and can block the service user's other clients.
+</Warning>
+
+Use Snowflake's [network policy
+guide](https://docs.snowflake.com/en/user-guide/network-policies) for legacy-policy
+migration. Do not disable network-policy enforcement to troubleshoot MCP access.
 
 ## Create the organization PAT
 
-You can reuse the `SIDECAR_USER` service user from the [Snowflake integration
-setup](/integrations/data-warehouses/snowflake#2-create-a-user-role-and-database-for-sidecar),
-or create a separate service user with narrower data access.
-
-The following example creates a 90-day PAT for the existing Sidecar service
-user and restricts it to `SIDECAR_ROLE`:
+Create a PAT for the service user, restricted to the role prepared above.
+Choose an expiration allowed by your authentication policy. This example uses
+90 days:
 
 ```sql
-ALTER USER IF EXISTS SIDECAR_USER
+ALTER USER SIDECAR_USER
   ADD PROGRAMMATIC ACCESS TOKEN SIDECAR_AGENT_CONSOLE
   ROLE_RESTRICTION = 'SIDECAR_ROLE'
   DAYS_TO_EXPIRY = 90
@@ -123,13 +180,9 @@ ALTER USER IF EXISTS SIDECAR_USER
 ```
 
 Copy the `token_secret` value from the result. Snowflake shows it only once.
-Change the expiration to comply with your authentication policy.
-
-Snowflake requires a role restriction for service-user PATs by default. Your
-authentication policies must also allow `PROGRAMMATIC_ACCESS_TOKEN` as an
-authentication method. See Snowflake's
-[programmatic access token guide](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens)
-for authentication policy requirements, token generation, and rotation.
+Your authentication policy must permit `PROGRAMMATIC_ACCESS_TOKEN`. See the
+[PAT guide](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens)
+for policy requirements and rotation.
 
 ## Enable Snowflake MCP in Sidecar
 
@@ -138,38 +191,108 @@ for authentication policy requirements, token generation, and rotation.
 3. Click **Enable MCP**.
 4. Paste the service user's PAT into **Service account PAT (organization-wide)**.
 5. Click **Add server**.
+6. In **Integrations → MCP Servers**, confirm that Snowflake lists `executesql`.
 
-Sidecar derives the endpoint from the Snowflake account identifier and the
-database selected during MCP server setup. It then connects to the server and
-discovers its tools.
-
-{/* TODO: Add a screenshot of the Snowflake MCP tab with Enable MCP highlighted. Save it as `/images/integrations/mcp-servers/snowflake-enable.png`. */}
+Sidecar derives the endpoint from your Snowflake account and selected MCP
+database. Registration authenticates from Sidecar and discovers tools.
 
 ## Finish agent setup
 
-Registering the server does not give it to an agent automatically. [Grant the
-Snowflake MCP server to an agent and select it for jobs](/products/agent-console/setup/give-agents-mcp-access).
+Confirm the Snowflake grant and job selection, then verify a query in a new
+Agent Console run.
 
-Rotate the PAT before it expires. In **Integrations → MCP Servers**, open the
-Snowflake row and select **Replace token**.
+### Verify Agent Console access
+
+1. [Grant Snowflake to the agent and enable it for the
+   job](/products/agent-console/setup/give-agents-mcp-access).
+2. Create a manual connection-check job, or use an existing manual job whose
+   other setup requirements are complete.
+3. Replace `<DATA_DATABASE>.<DATA_SCHEMA>.<DATA_TABLE>` below with one existing
+   table the service role is allowed to read. Use these job instructions:
+
+```text
+Use the Snowflake MCP executesql tool to check this connection.
+Run SELECT CURRENT_USER() AS USER_NAME, CURRENT_ROLE() AS ROLE_NAME,
+CURRENT_WAREHOUSE() AS WAREHOUSE_NAME;
+Then run SELECT * FROM <DATA_DATABASE>.<DATA_SCHEMA>.<DATA_TABLE> LIMIT 1;
+Report the actual tool results and any connection or access error.
+Do not change data, files, or repositories.
+```
+
+4. Save the job, make it active, and click **Run now** to start a new run.
+5. Complete any required [MCP
+   approval](/products/agent-console/jobs/runs-and-approvals#approvals).
+6. In the run transcript, expand the Snowflake tool calls. Confirm that the
+   identity query returns the expected service user, role, and warehouse.
+   Confirm that the table query completes without an access error. An empty
+   table can return zero rows successfully.
+
+<Check>
+  Setup is complete when Snowflake MCP executes both queries successfully in
+  Agent Console. A Connected badge or an agent's written assurance alone does
+  not establish runtime query access.
+</Check>
+
+Grant and job-selection changes apply to new runs. Start a new run after
+changing them; replying in an existing conversation keeps its captured access.
+Delete a disposable connection-check job when you finish.
+
+## Understand connection checks
+
+| Check | What it establishes |
+| --- | --- |
+| **Verify MCP Server** on the Ask Sidecar tab | The MCP object exists, using Sidecar's warehouse connection |
+| Registration, **Refresh tools**, or **Replace token** with a PAT | Sidecar can authenticate to the MCP endpoint and discover tools |
+| **Check now** for Snowflake | An unauthenticated endpoint check; it does not verify the stored PAT or Anthropic's access |
+| A successful Agent Console MCP query | Runtime authentication and permission to execute that query |
+
+The Snowflake Connected badge records earlier authenticated discovery. It can
+remain Connected after a runtime authentication failure. **Check now** can
+advance the check timestamp without validating the credential. Use the runtime
+verification above before relying on the connection.
+
+## Maintain the credential
+
+Rotate the PAT before it expires. In **Integrations → MCP Servers**, select
+**Replace token** on the Snowflake row. After saving the replacement, repeat the
+Agent Console verification.
 
 ## Troubleshooting
 
 <Accordion title="The MCP tab says to set up the Snowflake MCP server first">
-  Complete the [Snowflake MCP admin setup](/products/agents/ask-sidecar-snowflake#admin-setup)
-  on the **Ask Sidecar** tab. Run the generated SQL, then click **Verify MCP
-  Server** before returning to the **MCP** tab.
+  Complete the [MCP object setup](/products/agents/ask-sidecar-snowflake#admin-setup)
+  on the **Ask Sidecar** tab. Run the generated SQL and click **Verify MCP
+  Server**. You do not need a personal Ask Sidecar PAT for Agent Console.
+</Accordion>
+
+<Accordion title="Connected in Sidecar, but the agent has no Snowflake tools">
+  Confirm that Snowflake is selected under the agent's **Settings → Scope →
+  Connected tools** and enabled in the job's **MCP servers** selection. Start a
+  new run. Check that the service user's effective network policy allows both
+  Sidecar and Anthropic.
+
+  MCP authentication can fail during session initialization and leave the agent
+  with no callable Snowflake tools. The agent may describe this as missing
+  provisioning. A Connected badge does not rule out that failure.
+
+  If it persists, contact support with the Sidecar run URL, timestamp and time
+  zone, and sanitized connection error. Do not send the PAT.
 </Accordion>
 
 <Accordion title="The PAT is rejected">
-  Confirm that the token belongs to a service user, its role restriction names a
-  role granted to that user, and the token has not expired. Confirm that the
-  effective network policy allows `44.236.246.98/32` and that the authentication
-  policy permits `PROGRAMMATIC_ACCESS_TOKEN`.
+  Confirm that the PAT belongs to the intended service user, is not expired or
+  revoked, and is restricted to a role granted to that user. Confirm that the
+  authentication policy permits `PROGRAMMATIC_ACCESS_TOKEN` and the effective
+  network policy allows both outbound sources. A runtime authentication error
+  alone does not distinguish a bad token from a network-policy rejection.
+
+  Enter a valid replacement through **Replace token**, then repeat the Agent
+  Console verification.
 </Accordion>
 
-<Accordion title="Queries fail with access errors">
-  The PAT's restricted role controls data access. Grant that role `USAGE` on the
-  required warehouse, database, and schemas, plus `SELECT` on the required
-  tables and views. Do not grant broader access than the agents need.
+<Accordion title="The server initializes, but queries fail">
+  Check the service user's default warehouse and the PAT role's `USAGE` on that
+  warehouse. Confirm `USAGE` on the MCP database, schema, and server, plus
+  `USAGE` and `SELECT` on the target data. Tool discovery does not prove these
+  query permissions.
 </Accordion>

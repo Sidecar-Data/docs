@@ -406,7 +406,8 @@ logs](https://docs.cloud.google.com/logging/docs/export/configure_export_v2),
 
 ## Add BigQuery MCP to Agent Console
 
-The warehouse connection above does not automatically provide query tools to
-agents. The `mcp.tools.call` permission in the custom role enables Google's
-managed MCP servers. Follow [Set up BigQuery
-MCP](/integrations/mcp-servers/bigquery) to confirm the connection.
+After you save this integration, Sidecar creates its managed BigQuery MCP
+connection from the same service account. The custom role's `mcp.tools.call`
+permission allows MCP tool calls. Follow [Set up BigQuery
+MCP](/integrations/mcp-servers/bigquery) to confirm the agent grant and job
+selection, and verify a query in Agent Console.
