@@ -123,7 +123,8 @@
               "integrations/bi-analytics/metabase",
               "integrations/bi-analytics/lightdash",
               "integrations/bi-analytics/omni",
-              "integrations/bi-analytics/power-bi"
+              "integrations/bi-analytics/power-bi",
+              "integrations/bi-analytics/sigma"
             ]
           },
           {

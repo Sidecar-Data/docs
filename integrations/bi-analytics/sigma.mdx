@@ -1,0 +1,111 @@
+---
+title: Sigma
+description: "Connect your Sigma organization to Sidecar"
+icon: "table-cells"
+---
+
+Sidecar reads workbook, data model, and lineage metadata from the Sigma REST API. The Sidecar catalog then shows which Sigma workbooks and elements read each warehouse table.
+
+## Prerequisites
+
+- A Sigma member with the **Admin** account type, to create the credentials
+- A Sigma member with the **Admin** account type, to own the credentials. This can be the same member.
+- The warehouse that Sigma reads from, connected to Sidecar. For example, see [Snowflake](/integrations/data-warehouses/snowflake).
+
+## 1. Choose who owns the credentials
+
+Sigma API credentials belong to one member of your organization. Sigma returns only the workbooks and data models that this member can access, with the permissions of the member's account type.
+
+Give the owner the **Admin** account type. Sidecar can then list every workbook and data model in your organization, including those in workspaces that aren't shared with the owner. If Sidecar can list a workbook but can't read its details, the Sidecar team tells you which workspaces to share with the owner.
+
+<Tip>
+  Make the owner a dedicated member, such as `sidecar@yourcompany.com`, instead of a person on your team. If the owner loses the **Admin** account type, Sidecar sees only the content shared with that member, and lineage for everything else stops updating.
+</Tip>
+
+## 2. Create API client credentials
+
+1. In Sigma, select your user avatar, then select **Administration**.
+2. In the side panel, select **Developer access**.
+3. Copy the **API base URL** at the top of the page. You share it with Sidecar in step 5.
+4. Click **Create new**.
+5. Under **Select scopes**, select **REST API**.
+6. For **Name**, enter `Sidecar`.
+7. (Optional) For **Description**, enter `Metadata sync for Sidecar`.
+8. For **Owner**, select the member from step 1.
+9. Click **Create**.
+10. Copy the **Client ID** and **Client secret**, and save them in a password manager.
+
+<Warning>
+  Sigma shows the client secret only once. If you lose it, revoke the credentials and create new ones.
+</Warning>
+
+<Note>
+  The API base URL depends on the cloud that hosts your Sigma organization, for example `https://aws-api.sigmacomputing.com`. Sigma lists every base URL in [Identify your API request URL](https://help.sigmacomputing.com/reference/get-started-sigma-api#identify-your-api-request-url).
+</Note>
+
+## 3. (Optional) Allow Sidecar's IP address
+
+Skip this step if your organization doesn't restrict Sigma access with an IP allowlist.
+
+1. In Sigma, select your user avatar, then select **Administration**.
+2. In the side panel, select **Authentication**.
+3. In the **IP address** section of the **IP allowlist**, select **Add**.
+4. For **Scope**, select **API**.
+5. For **IP address or CIDR range**, enter `44.236.246.98/32`, and enter `Sidecar` as the description.
+6. Click **Save**.
+
+## 4. (Optional) Test the credentials
+
+To confirm that the credentials work and that the owner has the **Admin** account type, run two requests. Replace `<base_url>`, `<client_id>`, and `<client_secret>` with your values.
+
+1. Request an access token:
+   ```bash
+   curl --request POST \
+     --url <base_url>/v2/auth/token \
+     --header 'content-type: application/x-www-form-urlencoded' \
+     --data grant_type=client_credentials \
+     --data client_id=<client_id> \
+     --data client_secret=<client_secret>
+   ```
+   The response contains an `access_token`.
+2. List workbooks across your organization with that token:
+   ```bash
+   curl --request GET \
+     --url '<base_url>/v2/workbooks?skipPermissionCheck=true&limit=5' \
+     --header 'authorization: Bearer <access_token>'
+   ```
+   The response lists up to five workbooks. If the request fails, check that the owner has the **Admin** account type.
+
+## 5. Connect Sigma to Sidecar
+
+Provide the following information to the Sidecar team. Send the client secret through a password manager share or another secure channel, not in a Slack message.
+
+| Field | Description |
+|-------|-------------|
+| **API base URL** | From step 2, for example `https://aws-api.sigmacomputing.com` |
+| **Client ID** | From step 2 |
+| **Client secret** | From step 2 |
+
+## What Sidecar reads
+
+Apart from the request for an access token, Sidecar sends only `GET` requests to the Sigma REST API. It reads:
+
+- Workbook names, paths, and version numbers, and the email addresses of their owners
+- Page and element names, and the SQL that Sigma generates for each element
+- Data model names and elements
+- Lineage between elements, data models, custom SQL, and warehouse tables
+- Connection names, and the database, schema, and table names that elements read
+
+Sidecar doesn't read query results. It doesn't run queries in Sigma, and it doesn't change workbooks, data models, or settings.
+
+<Note>
+  The SQL that Sigma generates can include values that people enter in workbook filters and controls.
+</Note>
+
+## Revoke access
+
+To disconnect Sidecar, revoke its credentials in Sigma:
+
+1. In Sigma, select your user avatar, then select **Administration**.
+2. In the side panel, select **Developer access**.
+3. Find the `Sidecar` credentials, click **More**, and select **Revoke**.
