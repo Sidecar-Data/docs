@@ -124,7 +124,8 @@
               "integrations/bi-analytics/lightdash",
               "integrations/bi-analytics/omni",
               "integrations/bi-analytics/power-bi",
-              "integrations/bi-analytics/sigma"
+              "integrations/bi-analytics/sigma",
+              "integrations/bi-analytics/hex"
             ]
           },
           {
