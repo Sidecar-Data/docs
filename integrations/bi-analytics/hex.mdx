@@ -1,0 +1,111 @@
+---
+title: Hex
+description: "Connect your Hex workspace to Sidecar"
+icon: "hexagon"
+---
+
+Sidecar reads project metadata and project exports from the Hex API. The Sidecar catalog then shows which Hex projects read each warehouse table, and how often people view each project's app.
+
+## Prerequisites
+
+- A Hex workspace on the Team or Enterprise plan, which include the Hex API
+- A Hex member with the **Admin** workspace role, to create a workspace token
+- The warehouse that Hex reads from, connected to Sidecar. For example, see [Snowflake](/integrations/data-warehouses/snowflake).
+
+## 1. Create a workspace token
+
+A workspace token has the permissions of a workspace Admin, so Sidecar can read every project in your workspace. Only an Admin can create one.
+
+1. In Hex, open your user settings, then select **API keys** under **Account**.
+2. Click **New Token** to create a workspace token.
+3. For the description, enter `Sidecar`.
+4. For the expiration, select no expiry.
+5. For the scopes, select **Read projects**, and give **Data connections** read-only access. Sidecar needs no other scopes.
+6. Create the token. Copy it and save it in a password manager. A workspace token starts with `hxtw_`.
+
+Sidecar needs both scopes. It reads your data connections to match each one to a warehouse connected to Sidecar. Without read access to data connections, the Hex sync fails.
+
+<Tip>
+  If your policy requires tokens to expire, pick the longest duration and plan to replace the token before it expires. Hex emails you 72 hours and 24 hours before a token expires. When it expires, the Hex sync stops until you enter a new token in Sidecar.
+</Tip>
+
+<Note>
+  A personal access token (`hxtp_`) also works, but Sidecar then sees only the projects that its owner can view. A personal token always expires, after at most 120 days.
+</Note>
+
+## 2. (Optional) Test the token
+
+To confirm that the token has both scopes, run two requests. Replace `<token>` with your token.
+
+1. List one project:
+   ```bash
+   curl --request GET \
+     --url 'https://app.hex.tech/api/v1/projects?limit=1' \
+     --header 'authorization: Bearer <token>'
+   ```
+   The response lists up to one project.
+2. List your data connections:
+   ```bash
+   curl --request GET \
+     --url 'https://app.hex.tech/api/v1/data-connections' \
+     --header 'authorization: Bearer <token>'
+   ```
+   The response lists your workspace's data connections. If it fails with `403`, give the token read-only access to data connections.
+
+<Note>
+  For a single-tenant, EU, or HIPAA workspace, replace `app.hex.tech` with your Hex host, for example `eu.hex.tech` or `yourcompany.hex.tech`.
+</Note>
+
+## 3. Connect Hex to Sidecar
+
+1. Go to the **Integrations** page in Sidecar.
+2. Find and click the **Hex** integration under "Browse integrations".
+3. Enter the following information:
+
+   | Field | Description |
+   |-------|-------------|
+   | **Profile Name** | A name for this connection, for example `hex` |
+   | **Base URL** | `https://app.hex.tech`. Change it only for a single-tenant, EU, or HIPAA workspace, for example `https://eu.hex.tech`. |
+   | **API Token** | The token from step 1 |
+
+4. Click **Test Connection**, then **Save**.
+
+**Test Connection** checks that the token can read projects. It doesn't check access to data connections, so run the second request in step 2 if you aren't sure the token has that scope.
+
+## What Sidecar reads
+
+Sidecar sends `GET` requests to the Hex API, and `POST` requests to its export endpoint, which returns a project's contents without running it. It reads:
+
+- Project titles, descriptions, statuses, and categories, and the email addresses of their owners and creators
+- When each project was created, last edited, published, and viewed, and how many times people viewed its app
+- Project schedules
+- Data connection names and types, and their non-secret details, such as the account, database, and schema. Hex doesn't return connection passwords or keys.
+- The contents of each project, from its latest published version. If a project was never published, Sidecar reads its draft.
+- The components that each project imports, at the version that the project uses
+- Your workspace ID, to link to each project in Hex
+
+From each project's contents, Sidecar keeps the SQL that each SQL cell sends to your warehouse, and the warehouse tables that no-code cells read. It doesn't keep query results, and it doesn't keep Python code or Markdown text.
+
+Sidecar doesn't run projects or queries in Hex, and it doesn't change projects, connections, or settings.
+
+<Note>
+  Sidecar renders each SQL cell's Jinja with your input parameters' default values, and stores input values as `?`. A value that a project inserts with the `sqlsafe` filter becomes part of the SQL, so Sidecar stores it as written.
+</Note>
+
+## How Hex appears in Sidecar
+
+- Each Hex project is one asset in the catalog. Sidecar leaves out archived and trashed projects. When you archive a project, its lineage leaves the catalog too.
+- A component doesn't appear as its own asset. The tables that a component reads show up as reads of each project that imports it.
+- Lineage comes from SQL cells that query a data connection, and from no-code cells that read a warehouse table. Python cells, semantic model cells, and SQL cells that query earlier results draw no lineage.
+- Usage is the number of times people viewed a project's published app each day.
+- Sidecar reads a project's published version, so changes in a draft appear after you publish them.
+- Sidecar exports a published project again only after it's republished, and a never-published project after it's edited. In a large workspace, the first sync can spread the exports over several syncs.
+
+Sidecar's requests count toward your workspace's Hex API rate limit. Sidecar slows down when Hex asks it to.
+
+## Revoke access
+
+To disconnect Sidecar, revoke its token in Hex:
+
+1. In Hex, open your user settings, then select **API keys** under **Account**.
+2. Find the `Sidecar` token, click the three-dot menu next to it, and select **Revoke**.
